@@ -160,13 +160,40 @@ class TelegramBot:
     def send_message_to_user(self, user_id: int, message: str):
         """Отправка сообщения конкретному пользователю"""
         try:
-            # Создаем временное приложение для отправки
-            from telegram import Bot
-            temp_bot = Bot(token=self.token)
+            import aiohttp
+            import asyncio
             
-            # Отправляем сообщение
-            temp_bot.send_message(chat_id=user_id, text=message)
-            return True
+            # Создаем временный event loop для отправки
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            async def send_message():
+                async with aiohttp.ClientSession() as session:
+                    url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+                    data = {
+                        'chat_id': user_id,
+                        'text': message,
+                        'parse_mode': 'HTML'
+                    }
+                    
+                    async with session.post(url, json=data) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            if result.get('ok'):
+                                logger.info(f"Сообщение отправлено пользователю {user_id}")
+                                return True
+                            else:
+                                logger.error(f"Telegram API ошибка: {result}")
+                                return False
+                        else:
+                            logger.error(f"HTTP ошибка: {response.status}")
+                            return False
+            
+            # Запускаем отправку
+            result = loop.run_until_complete(send_message())
+            loop.close()
+            return result
+            
         except Exception as e:
             logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
             return False

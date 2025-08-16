@@ -80,14 +80,24 @@ def broadcast():
                 success_count = 0
                 failed_count = 0
                 
+                print(f"Начинаем рассылку сообщения: {message}")
+                print(f"Всего подписчиков: {len(bot.subscribers)}")
+                
                 for user_id in bot.subscribers:
                     try:
-                        # Используем контекст бота для отправки
-                        bot.send_message_to_user(user_id, message)
-                        success_count += 1
+                        print(f"Отправляем сообщение пользователю {user_id}")
+                        result = bot.send_message_to_user(user_id, message)
+                        if result:
+                            success_count += 1
+                            print(f"✅ Сообщение отправлено пользователю {user_id}")
+                        else:
+                            failed_count += 1
+                            print(f"❌ Ошибка отправки пользователю {user_id}")
                     except Exception as e:
-                        print(f"Ошибка отправки пользователю {user_id}: {e}")
                         failed_count += 1
+                        print(f"❌ Исключение при отправке пользователю {user_id}: {e}")
+                
+                print(f"Рассылка завершена: {success_count} успешно, {failed_count} ошибок")
                 
                 if success_count > 0:
                     flash(f'Сообщение отправлено {success_count} подписчикам!', 'success')
@@ -95,6 +105,7 @@ def broadcast():
                     flash(f'Ошибка отправки {failed_count} подписчикам', 'error')
                     
             except Exception as e:
+                print(f"Общая ошибка рассылки: {e}")
                 flash(f'Ошибка рассылки: {e}', 'error')
             
             return redirect(url_for('broadcast'))
