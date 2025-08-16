@@ -180,45 +180,52 @@ class TelegramBot:
     def send_document_to_user(self, user_id: int, file_path: str, filename: str, caption: str = ""):
         """Отправка документа конкретному пользователю"""
         try:
-            import aiohttp
-            import asyncio
+            import requests
             
-            # Создаем временный event loop для отправки
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            logger.info(f"Начинаем отправку документа пользователю {user_id}")
+            logger.info(f"Файл: {file_path}, размер: {os.path.getsize(file_path)} байт")
             
-            async def send_document():
-                async with aiohttp.ClientSession() as session:
-                    url = f"https://api.telegram.org/bot{self.token}/sendDocument"
+            url = f"https://api.telegram.org/bot{self.token}/sendDocument"
+            
+            # Читаем файл
+            with open(file_path, 'rb') as file:
+                files = {
+                    'document': (filename, file, 'application/pdf')
+                }
+                data = {
+                    'chat_id': user_id,
+                    'caption': caption
+                }
+                
+                logger.info(f"Отправляем запрос к Telegram API: {url}")
+                response = requests.post(url, data=data, files=files, timeout=30)
+                
+                logger.info(f"Получен ответ: статус {response.status_code}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"Ответ API: {result}")
                     
-                    # Читаем файл
-                    with open(file_path, 'rb') as file:
-                        files = {
-                            'document': (filename, file, 'application/pdf')
-                        }
-                        data = {
-                            'chat_id': user_id,
-                            'caption': caption
-                        }
-                        
-                        async with session.post(url, data=data, files=files) as response:
-                            if response.status == 200:
-                                result = await response.json()
-                                if result.get('ok'):
-                                    logger.info(f"Документ отправлен пользователю {user_id}")
-                                    return True
-                                else:
-                                    logger.error(f"Telegram API ошибка при отправке документа: {result}")
-                                    return False
-                            else:
-                                logger.error(f"HTTP ошибка при отправке документа: {response.status}")
-                                return False
+                    if result.get('ok'):
+                        logger.info(f"Документ успешно отправлен пользователю {user_id}")
+                        return True
+                    else:
+                        logger.error(f"Telegram API ошибка: {result}")
+                        return False
+                else:
+                    logger.error(f"HTTP ошибка {response.status_code}: {response.text}")
+                    return False
             
-            # Запускаем отправку
-            result = loop.run_until_complete(send_document())
-            loop.close()
-            return result
-            
+        except ImportError:
+            logger.error("Модуль requests не установлен. Устанавливаем...")
+            try:
+                import subprocess
+                subprocess.check_call(['pip', 'install', 'requests'])
+                logger.info("requests установлен, повторяем отправку...")
+                return self.send_document_to_user(user_id, file_path, filename, caption)
+            except Exception as e:
+                logger.error(f"Не удалось установить requests: {e}")
+                return False
         except Exception as e:
             logger.error(f"Ошибка отправки документа пользователю {user_id}: {e}")
             return False
@@ -226,40 +233,41 @@ class TelegramBot:
     def send_message_to_user(self, user_id: int, message: str):
         """Отправка сообщения конкретному пользователю"""
         try:
-            import aiohttp
-            import asyncio
+            import requests
             
-            # Создаем временный event loop для отправки
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            logger.info(f"Отправляем сообщение пользователю {user_id}: {message[:50]}...")
             
-            async def send_message():
-                async with aiohttp.ClientSession() as session:
-                    url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-                    data = {
-                        'chat_id': user_id,
-                        'text': message,
-                        'parse_mode': 'HTML'
-                    }
-                    
-                    async with session.post(url, json=data) as response:
-                        if response.status == 200:
-                            result = await response.json()
-                            if result.get('ok'):
-                                logger.info(f"Сообщение отправлено пользователю {user_id}")
-                                return True
-                            else:
-                                logger.error(f"Telegram API ошибка: {result}")
-                                return False
-                        else:
-                            logger.error(f"HTTP ошибка: {response.status}")
-                            return False
+            url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+            data = {
+                'chat_id': user_id,
+                'text': message,
+                'parse_mode': 'HTML'
+            }
             
-            # Запускаем отправку
-            result = loop.run_until_complete(send_message())
-            loop.close()
-            return result
+            response = requests.post(url, json=data, timeout=30)
             
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('ok'):
+                    logger.info(f"Сообщение успешно отправлено пользователю {user_id}")
+                    return True
+                else:
+                    logger.error(f"Telegram API ошибка: {result}")
+                    return False
+            else:
+                logger.error(f"HTTP ошибка {response.status_code}: {response.text}")
+                return False
+                
+        except ImportError:
+            logger.error("Модуль requests не установлен. Устанавливаем...")
+            try:
+                import subprocess
+                subprocess.check_call(['pip', 'install', 'requests'])
+                logger.info("requests установлен, повторяем отправку...")
+                return self.send_message_to_user(user_id, message)
+            except Exception as e:
+                logger.error(f"Не удалось установить requests: {e}")
+                return False
         except Exception as e:
             logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
             return False
