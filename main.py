@@ -7,6 +7,7 @@ import os
 import sys
 import threading
 import time
+import asyncio
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения
@@ -20,12 +21,22 @@ sys.path.append(os.path.join(current_dir, 'web'))
 def run_bot():
     """Запуск телеграм бота в отдельном потоке"""
     try:
+        # Создаем новый event loop для этого потока
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
         from telegram_bot import TelegramBot
         bot = TelegramBot()
         print("🤖 Запуск телеграм бота...")
-        bot.run()
+        
+        # Запускаем бота в этом event loop
+        loop.run_until_complete(bot.run_async())
     except Exception as e:
         print(f"❌ Ошибка запуска бота: {e}")
+    finally:
+        # Закрываем event loop
+        if 'loop' in locals():
+            loop.close()
 
 def run_web():
     """Запуск веб-интерфейса в отдельном потоке"""

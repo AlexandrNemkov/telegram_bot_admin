@@ -4,6 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from config import Config
 import json
+import asyncio
 
 # Настройка логирования
 logging.basicConfig(
@@ -151,24 +152,52 @@ class TelegramBot:
         """Получение списка подписчиков"""
         return list(self.subscribers)
     
-    def run(self):
-        """Запуск бота"""
+    async def run_async(self):
+        """Асинхронный запуск бота"""
         if not self.token:
             logger.error("TELEGRAM_TOKEN не установлен!")
             return
         
-        # Создаем приложение
-        application = Application.builder().token(self.token).build()
+        try:
+            # Создаем приложение
+            application = Application.builder().token(self.token).build()
+            
+            # Добавляем обработчики
+            application.add_handler(CommandHandler("start", self.start_command))
+            application.add_handler(CommandHandler("help", self.help_command))
+            application.add_handler(CommandHandler("status", self.status_command))
+            application.add_handler(CallbackQueryHandler(self.button_callback))
+            
+            # Запускаем бота
+            logger.info("Бот запущен!")
+            await application.run_polling(allowed_updates=Update.ALL_TYPES)
+        except Exception as e:
+            logger.error(f"Ошибка запуска бота: {e}")
+            raise
+
+    def run(self):
+        """Запуск бота (для обратной совместимости)"""
+        if not self.token:
+            logger.error("TELEGRAM_TOKEN не установлен!")
+            return
         
-        # Добавляем обработчики
-        application.add_handler(CommandHandler("start", self.start_command))
-        application.add_handler(CommandHandler("help", self.help_command))
-        application.add_handler(CommandHandler("status", self.status_command))
-        application.add_handler(CallbackQueryHandler(self.button_callback))
-        
-        # Запускаем бота
-        logger.info("Бот запущен!")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        try:
+            # Создаем приложение
+            application = Application.builder().token(self.token).build()
+            
+            # Добавляем обработчики
+            application.add_handler(CommandHandler("start", self.start_command))
+            application.add_handler(CommandHandler("help", self.help_command))
+            application.add_handler(CommandHandler("status", self.status_command))
+            application.add_handler(CallbackQueryHandler(self.button_callback))
+            
+            # Запускаем бота
+            logger.info("Бот запущен!")
+            # Запускаем в текущем event loop
+            asyncio.run(application.run_polling(allowed_updates=Update.ALL_TYPES))
+        except Exception as e:
+            logger.error(f"Ошибка запуска бота: {e}")
+            raise
 
 if __name__ == "__main__":
     bot = TelegramBot()
