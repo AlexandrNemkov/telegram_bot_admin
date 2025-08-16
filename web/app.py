@@ -20,6 +20,12 @@ static_dir = os.path.join(project_root, 'static')
 app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
 app.config.from_object(Config)
 
+# Увеличиваем лимит загрузки файлов
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+app.config['MAX_CONTENT_LENGTH_STR'] = '50MB'
+app.config['UPLOAD_EXTENSIONS'] = {'.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png'}
+app.config['UPLOAD_MAX_FILES'] = 5
+
 # Инициализация Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -126,11 +132,34 @@ def settings():
             flash('Приветственное сообщение обновлено!', 'success')
         
         if pdf_file and pdf_file.filename:
-            filename = secure_filename(pdf_file.filename)
-            pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            pdf_file.save(pdf_path)
-            bot.update_welcome_pdf(pdf_path)
-            flash('PDF файл загружен!', 'success')
+            try:
+                # Проверяем размер файла
+                if pdf_file.content_length and pdf_file.content_length > app.config['MAX_CONTENT_LENGTH']:
+                    flash(f'Файл слишком большой! Максимальный размер: {app.config["MAX_CONTENT_LENGTH_STR"]}', 'error')
+                    return redirect(url_for('settings'))
+                
+                # Проверяем расширение файла
+                filename = secure_filename(pdf_file.filename)
+                file_ext = os.path.splitext(filename)[1].lower()
+                
+                if file_ext not in app.config['UPLOAD_EXTENSIONS']:
+                    flash(f'Неподдерживаемый тип файла! Разрешены: {", ".join(app.config["UPLOAD_EXTENSIONS"])}', 'error')
+                    return redirect(url_for('settings'))
+                
+                # Создаем папку uploads если её нет
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                
+                # Сохраняем файл
+                pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                pdf_file.save(pdf_path)
+                
+                # Обновляем путь к файлу в боте
+                bot.update_welcome_pdf(pdf_path)
+                flash(f'Файл {filename} успешно загружен!', 'success')
+                
+            except Exception as e:
+                flash(f'Ошибка загрузки файла: {e}', 'error')
+                print(f"Ошибка загрузки файла: {e}")
         
         return redirect(url_for('settings'))
     

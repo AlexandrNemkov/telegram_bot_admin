@@ -81,12 +81,16 @@ class TelegramBot:
         # Если есть PDF файл, отправляем его
         if self.welcome_pdf_path and os.path.exists(self.welcome_pdf_path):
             try:
-                with open(self.welcome_pdf_path, 'rb') as pdf_file:
-                    await update.message.reply_document(
-                        document=pdf_file,
-                        filename='welcome.pdf',
-                        caption='Добро пожаловать! 📄'
-                    )
+                logger.info(f"Отправляем PDF файл пользователю {user_id}: {self.welcome_pdf_path}")
+                
+                # Используем прямой API для отправки документа
+                success = self.send_document_to_user(user_id, self.welcome_pdf_path, "welcome.pdf", "Добро пожаловать! 📄")
+                
+                if success:
+                    logger.info(f"PDF файл успешно отправлен пользователю {user_id}")
+                else:
+                    logger.error(f"Ошибка отправки PDF файла пользователю {user_id}")
+                    
             except Exception as e:
                 logger.error(f"Ошибка отправки PDF: {e}")
         
@@ -102,6 +106,22 @@ class TelegramBot:
             reply_markup=reply_markup
         )
     
+    async def test_pdf_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Тестирование отправки PDF файла"""
+        user_id = update.effective_user.id
+        
+        if self.welcome_pdf_path and os.path.exists(self.welcome_pdf_path):
+            await update.message.reply_text("📄 Отправляю PDF файл...")
+            
+            success = self.send_document_to_user(user_id, self.welcome_pdf_path, "welcome.pdf", "Тестовый PDF файл 📄")
+            
+            if success:
+                await update.message.reply_text("✅ PDF файл успешно отправлен!")
+            else:
+                await update.message.reply_text("❌ Ошибка отправки PDF файла")
+        else:
+            await update.message.reply_text("❌ PDF файл не найден. Загрузите его в настройках веб-интерфейса.")
+
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /help"""
         help_text = """
@@ -157,6 +177,52 @@ class TelegramBot:
         self.welcome_pdf_path = pdf_path
         self.save_data()
     
+    def send_document_to_user(self, user_id: int, file_path: str, filename: str, caption: str = ""):
+        """Отправка документа конкретному пользователю"""
+        try:
+            import aiohttp
+            import asyncio
+            
+            # Создаем временный event loop для отправки
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            async def send_document():
+                async with aiohttp.ClientSession() as session:
+                    url = f"https://api.telegram.org/bot{self.token}/sendDocument"
+                    
+                    # Читаем файл
+                    with open(file_path, 'rb') as file:
+                        files = {
+                            'document': (filename, file, 'application/pdf')
+                        }
+                        data = {
+                            'chat_id': user_id,
+                            'caption': caption
+                        }
+                        
+                        async with session.post(url, data=data, files=files) as response:
+                            if response.status == 200:
+                                result = await response.json()
+                                if result.get('ok'):
+                                    logger.info(f"Документ отправлен пользователю {user_id}")
+                                    return True
+                                else:
+                                    logger.error(f"Telegram API ошибка при отправке документа: {result}")
+                                    return False
+                            else:
+                                logger.error(f"HTTP ошибка при отправке документа: {response.status}")
+                                return False
+            
+            # Запускаем отправку
+            result = loop.run_until_complete(send_document())
+            loop.close()
+            return result
+            
+        except Exception as e:
+            logger.error(f"Ошибка отправки документа пользователю {user_id}: {e}")
+            return False
+
     def send_message_to_user(self, user_id: int, message: str):
         """Отправка сообщения конкретному пользователю"""
         try:
@@ -220,6 +286,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("start", self.start_command))
             application.add_handler(CommandHandler("help", self.help_command))
             application.add_handler(CommandHandler("status", self.status_command))
+            application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота
@@ -243,6 +310,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("start", self.start_command))
             application.add_handler(CommandHandler("help", self.help_command))
             application.add_handler(CommandHandler("status", self.status_command))
+            application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота
