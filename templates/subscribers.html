@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Подписчики - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-users me-2"></i>Подписчики бота
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Список подписчиков
+                </h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" id="refreshBtn">
+                        <i class="fas fa-sync-alt me-2"></i>Обновить
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" id="exportBtn">
+                        <i class="fas fa-download me-2"></i>Экспорт
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if subscribers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>ID пользователя</th>
+                                    <th>Дата подписки</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subscriber in subscribers %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <code>{{ subscriber }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">Сегодня</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">Активен</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                onclick="sendPersonalMessage({{ subscriber }})">
+                                            <i class="fas fa-paper-plane me-1"></i>Сообщение
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Всего подписчиков: <strong>{{ subscribers|length }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a href="{{ url_for('broadcast') }}" class="btn btn-success">
+                                <i class="fas fa-bullhorn me-2"></i>Создать рассылку
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="display-4 text-muted mb-3">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h4 class="text-muted">Пока нет подписчиков</h4>
+                        <p class="text-muted">Подписчики появятся здесь после того, как пользователи начнут использовать бота</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для личного сообщения -->
+<div class="modal fade" id="personalMessageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-paper-plane me-2"></i>Личное сообщение
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Получатель:</label>
+                    <input type="text" class="form-control" id="recipientId" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="personalMessage" class="form-label">Сообщение:</label>
+                    <textarea class="form-control" id="personalMessage" rows="4" 
+                              placeholder="Введите текст сообщения..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="sendPersonalBtn">
+                    <i class="fas fa-paper-plane me-2"></i>Отправить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const personalMessageModal = new bootstrap.Modal(document.getElementById('personalMessageModal'));
+    
+    // Обновление списка
+    refreshBtn.addEventListener('click', function() {
+        location.reload();
+    });
+    
+    // Экспорт списка
+    exportBtn.addEventListener('click', function() {
+        const subscribers = {{ subscribers|tojson }};
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + "ID пользователя,Дата подписки,Статус\n"
+            + subscribers.map(sub => `${sub},Сегодня,Активен`).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "subscribers.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+    
+    // Отправка личного сообщения
+    window.sendPersonalMessage = function(userId) {
+        document.getElementById('recipientId').value = userId;
+        personalMessageModal.show();
+    };
+    
+    // Отправка личного сообщения
+    document.getElementById('sendPersonalBtn').addEventListener('click', function() {
+        const userId = document.getElementById('recipientId').value;
+        const message = document.getElementById('personalMessage').value.trim();
+        
+        if (!message) {
+            alert('Введите текст сообщения!');
+            return;
+        }
+        
+        // Здесь будет API вызов для отправки личного сообщения
+        alert(`Сообщение отправлено пользователю ${userId}`);
+        personalMessageModal.hide();
+        document.getElementById('personalMessage').value = '';
+    });
+});
+</script>
+{% endblock %}

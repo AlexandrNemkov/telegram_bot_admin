@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>Дашборд
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Статистика подписчиков -->
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="display-4 text-primary mb-2">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="card-title">{{ subscribers_count }}</h3>
+                <p class="card-text text-muted">Подписчиков</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Быстрые действия -->
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="display-4 text-success mb-2">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <h5 class="card-title">Рассылка</h5>
+                <p class="card-text text-muted">Отправить сообщение всем подписчикам</p>
+                <a href="{{ url_for('broadcast') }}" class="btn btn-success">
+                    <i class="fas fa-paper-plane me-2"></i>Создать рассылку
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Настройки -->
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="display-4 text-info mb-2">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h5 class="card-title">Настройки</h5>
+                <p class="card-text text-muted">Настроить приветственное сообщение и PDF</p>
+                <a href="{{ url_for('settings') }}" class="btn btn-info">
+                    <i class="fas fa-wrench me-2"></i>Настроить
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Последние действия
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Статистика бота</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Бот активен и работает</li>
+                            <li><i class="fas fa-users text-primary me-2"></i>{{ subscribers_count }} подписчиков</li>
+                            <li><i class="fas fa-file-pdf text-info me-2"></i>PDF файл настроен</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Быстрые ссылки</h6>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('subscribers') }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-list me-2"></i>Список подписчиков
+                            </a>
+                            <a href="{{ url_for('broadcast') }}" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-envelope me-2"></i>Новая рассылка
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

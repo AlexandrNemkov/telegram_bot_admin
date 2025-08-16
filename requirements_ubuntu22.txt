@@ -1,0 +1,30 @@
+# Обновленные зависимости для Ubuntu 22.04 LTS
+# Python 3.10+ совместимые версии
+
+# Telegram Bot API
+python-telegram-bot==21.7
+
+# Flask и расширения
+Flask==3.0.2
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+WTForms==3.1.2
+
+# Утилиты
+python-dotenv==1.0.1
+
+# WSGI сервер
+gunicorn==22.0.0
+
+# Зависимости Flask
+Werkzeug==3.0.1
+Jinja2==3.1.3
+MarkupSafe==2.1.5
+itsdangerous==2.1.2
+click==8.1.7
+
+# Дополнительные зависимости для Ubuntu 22.04
+cryptography==42.0.5
+pyOpenSSL==24.1.0
+requests==2.32.3
+urllib3==2.2.1

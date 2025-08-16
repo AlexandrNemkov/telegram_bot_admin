@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-cog me-2"></i>Настройки бота
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-comment me-2"></i>Приветственное сообщение
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="welcome_message" class="form-label">Текст приветственного сообщения</label>
+                        <textarea class="form-control" id="welcome_message" name="welcome_message" rows="4" 
+                                  placeholder="Введите текст приветственного сообщения, которое будет отправляться при команде /start">{{ welcome_message }}</textarea>
+                        <div class="form-text">
+                            Это сообщение будет отправляться всем новым пользователям при первом запуске бота
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="welcome_pdf" class="form-label">PDF файл для приветствия</label>
+                        <input type="file" class="form-control" id="welcome_pdf" name="welcome_pdf" accept=".pdf">
+                        <div class="form-text">
+                            Загрузите PDF файл, который будет автоматически отправляться новым пользователям
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Сохранить настройки
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Текущие настройки -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Текущие настройки
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Приветственное сообщение:</h6>
+                        <div class="alert alert-light">
+                            {{ welcome_message or 'Не настроено' }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>PDF файл:</h6>
+                        <div class="alert alert-light">
+                            {% if has_pdf %}
+                                <i class="fas fa-check text-success me-2"></i>Загружен
+                            {% else %}
+                                <i class="fas fa-times text-danger me-2"></i>Не загружен
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Рекомендации
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-comment me-2"></i>Приветственное сообщение</h6>
+                    <ul class="mb-0">
+                        <li>Будьте дружелюбны</li>
+                        <li>Объясните, что умеет бот</li>
+                        <li>Укажите основные команды</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-file-pdf me-2"></i>PDF файл</h6>
+                    <ul class="mb-0">
+                        <li>Максимальный размер: 16 МБ</li>
+                        <li>Формат: PDF</li>
+                        <li>Будет отправляться автоматически</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Предварительный просмотр -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Предварительный просмотр
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Приветственное сообщение:</strong>
+                    <div class="alert alert-light mt-2" id="messagePreview">
+                        {{ welcome_message or 'Сообщение не настроено' }}
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-outline-primary btn-sm" id="previewBtn">
+                    <i class="fas fa-eye me-2"></i>Обновить предварительный просмотр
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messageTextarea = document.getElementById('welcome_message');
+    const messagePreview = document.getElementById('messagePreview');
+    const previewBtn = document.getElementById('previewBtn');
+    
+    // Обновление предварительного просмотра при вводе
+    messageTextarea.addEventListener('input', function() {
+        updatePreview();
+    });
+    
+    // Кнопка обновления предварительного просмотра
+    previewBtn.addEventListener('click', function() {
+        updatePreview();
+    });
+    
+    function updatePreview() {
+        const message = messageTextarea.value.trim();
+        if (message) {
+            messagePreview.innerHTML = message.replace(/\n/g, '<br>');
+        } else {
+            messagePreview.innerHTML = 'Сообщение не настроено';
+        }
+    }
+});
+</script>
+{% endblock %}

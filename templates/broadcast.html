@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Рассылка - Админ-панель{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-bullhorn me-2"></i>Рассылка сообщений
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-paper-plane me-2"></i>Создать рассылку
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="broadcastForm">
+                    <div class="mb-3">
+                        <label for="message" class="form-label">Текст сообщения</label>
+                        <textarea class="form-control" id="message" name="message" rows="6" 
+                                  placeholder="Введите текст сообщения для рассылки..." required></textarea>
+                        <div class="form-text">
+                            <span id="charCount">0</span> символов
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Параметры рассылки</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="preview" checked>
+                                    <label class="form-check-label" for="preview">
+                                        Показать предварительный просмотр
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="confirmSend">
+                                    <label class="form-check-label" for="confirmSend">
+                                        Требовать подтверждение отправки
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" id="previewBtn">
+                            <i class="fas fa-eye me-2"></i>Предварительный просмотр
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="sendBtn">
+                            <i class="fas fa-paper-plane me-2"></i>Отправить рассылку
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Информация
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-users me-2"></i>Подписчики</h6>
+                    <p class="mb-0">Сообщение будет отправлено всем активным подписчикам бота.</p>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Внимание</h6>
+                    <p class="mb-0">Рассылка будет отправлена немедленно после подтверждения.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Предварительный просмотр -->
+        <div class="card mt-3" id="previewCard" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Предварительный просмотр
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="messagePreview"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Подтверждение отправки
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите отправить рассылку всем подписчикам?</p>
+                <div class="alert alert-info">
+                    <strong>Сообщение:</strong><br>
+                    <span id="confirmMessage"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="confirmSendBtn">
+                    <i class="fas fa-paper-plane me-2"></i>Отправить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messageTextarea = document.getElementById('message');
+    const charCount = document.getElementById('charCount');
+    const previewBtn = document.getElementById('previewBtn');
+    const previewCard = document.getElementById('previewCard');
+    const messagePreview = document.getElementById('messagePreview');
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmSendBtn = document.getElementById('confirmSendBtn');
+    
+    // Подсчет символов
+    messageTextarea.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+    
+    // Предварительный просмотр
+    previewBtn.addEventListener('click', function() {
+        const message = messageTextarea.value.trim();
+        if (message) {
+            messagePreview.innerHTML = message.replace(/\n/g, '<br>');
+            previewCard.style.display = 'block';
+        }
+    });
+    
+    // Отправка формы
+    document.getElementById('broadcastForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const message = messageTextarea.value.trim();
+        if (!message) {
+            alert('Введите текст сообщения!');
+            return;
+        }
+        
+        if (document.getElementById('confirmSend').checked) {
+            confirmMessage.textContent = message;
+            confirmModal.show();
+        } else {
+            sendBroadcast(message);
+        }
+    });
+    
+    // Подтверждение отправки
+    confirmSendBtn.addEventListener('click', function() {
+        const message = messageTextarea.value.trim();
+        sendBroadcast(message);
+        confirmModal.hide();
+    });
+    
+    function sendBroadcast(message) {
+        fetch('/api/send_broadcast', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                messageTextarea.value = '';
+                charCount.textContent = '0';
+                previewCard.style.display = 'none';
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при отправке рассылки');
+        });
+    }
+});
+</script>
+{% endblock %}
