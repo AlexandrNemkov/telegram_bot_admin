@@ -13,8 +13,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Добавляем пути к модулям
-sys.path.append(os.path.join(os.path.dirname(__file__), 'bot'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'web'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(current_dir, 'bot'))
+sys.path.append(os.path.join(current_dir, 'web'))
 
 def run_bot():
     """Запуск телеграм бота в отдельном потоке"""
@@ -31,6 +32,7 @@ def run_web():
     try:
         from app import app
         print("🌐 Запуск веб-интерфейса...")
+        # На сервере запускаем без debug режима
         app.run(debug=False, host='0.0.0.0', port=5000)
     except Exception as e:
         print(f"❌ Ошибка запуска веб-интерфейса: {e}")

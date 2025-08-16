@@ -4,12 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-WorkingDirectory=/path/to/telegram_bot_admin
-Environment=PATH=/path/to/telegram_bot_admin/venv/bin
-ExecStart=/path/to/telegram_bot_admin/venv/bin/python main.py
+User=telegram_bot_admin
+Group=telegram_bot_admin
+WorkingDirectory=/home/telegram_bot_admin
+Environment=PATH=/home/telegram_bot_admin/venv/bin
+Environment=PYTHONPATH=/home/telegram_bot_admin
+ExecStart=/home/telegram_bot_admin/venv/bin/python main.py
 Restart=always
 RestartSec=10
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

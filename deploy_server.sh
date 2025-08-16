@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Проверка аргументов
 if [ $# -ne 3 ]; then
     echo -e "${RED}Ошибка: Неверное количество аргументов${NC}"
-    echo "Использование: $0 SERVER_IP USERNAME DOMAIN"
+    echo "Использование: $0 94.241.141.253 alexandnemkov bot.tildahelp.ru"
     echo "Пример: $0 192.168.1.100 botuser bot.tildahelp.ru"
     exit 1
 fi

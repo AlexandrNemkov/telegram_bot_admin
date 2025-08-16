@@ -12,7 +12,12 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'bot'))
 from telegram_bot import TelegramBot
 
-app = Flask(__name__)
+# Получаем путь к корневой папке проекта (где находится папка templates)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+templates_dir = os.path.join(project_root, 'templates')
+static_dir = os.path.join(project_root, 'static')
+
+app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
 app.config.from_object(Config)
 
 # Инициализация Flask-Login
