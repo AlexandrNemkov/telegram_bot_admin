@@ -18,26 +18,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(current_dir, 'bot'))
 sys.path.append(os.path.join(current_dir, 'web'))
 
-def run_bot():
-    """Запуск телеграм бота в отдельном потоке"""
-    try:
-        # Создаем новый event loop для этого потока
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        from telegram_bot import TelegramBot
-        bot = TelegramBot()
-        print("🤖 Запуск телеграм бота...")
-        
-        # Запускаем бота в этом event loop
-        loop.run_until_complete(bot.run_async())
-    except Exception as e:
-        print(f"❌ Ошибка запуска бота: {e}")
-    finally:
-        # Закрываем event loop
-        if 'loop' in locals():
-            loop.close()
-
 def run_web():
     """Запуск веб-интерфейса в отдельном потоке"""
     try:
@@ -62,15 +42,21 @@ def main():
     os.makedirs('data', exist_ok=True)
     os.makedirs('uploads', exist_ok=True)
     
-    # Запускаем бота в отдельном потоке
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
+    # Запускаем веб-интерфейс в отдельном потоке
+    web_thread = threading.Thread(target=run_web, daemon=True)
+    web_thread.start()
     
-    # Небольшая задержка для запуска бота
+    # Небольшая задержка для запуска веб-интерфейса
     time.sleep(2)
     
-    # Запускаем веб-интерфейс в основном потоке
-    run_web()
+    # Запускаем бота в основном потоке
+    try:
+        from telegram_bot import TelegramBot
+        bot = TelegramBot()
+        print("🤖 Запуск телеграм бота...")
+        bot.run()
+    except Exception as e:
+        print(f"❌ Ошибка запуска бота: {e}")
 
 if __name__ == "__main__":
     main()

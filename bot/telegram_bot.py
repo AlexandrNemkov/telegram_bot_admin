@@ -176,7 +176,7 @@ class TelegramBot:
             raise
 
     def run(self):
-        """Запуск бота (для обратной совместимости)"""
+        """Запуск бота (основной метод)"""
         if not self.token:
             logger.error("TELEGRAM_TOKEN не установлен!")
             return
@@ -193,8 +193,7 @@ class TelegramBot:
             
             # Запускаем бота
             logger.info("Бот запущен!")
-            # Запускаем в текущем event loop
-            asyncio.run(application.run_polling(allowed_updates=Update.ALL_TYPES))
+            application.run_polling(allowed_updates=Update.ALL_TYPES)
         except Exception as e:
             logger.error(f"Ошибка запуска бота: {e}")
             raise
