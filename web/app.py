@@ -75,8 +75,28 @@ def broadcast():
     if request.method == 'POST':
         message = request.form.get('message')
         if message:
-            # Здесь будет логика отправки сообщения всем подписчикам
-            flash(f'Сообщение отправлено!', 'success')
+            try:
+                # Отправляем сообщение всем подписчикам
+                success_count = 0
+                failed_count = 0
+                
+                for user_id in bot.subscribers:
+                    try:
+                        # Используем контекст бота для отправки
+                        bot.send_message_to_user(user_id, message)
+                        success_count += 1
+                    except Exception as e:
+                        print(f"Ошибка отправки пользователю {user_id}: {e}")
+                        failed_count += 1
+                
+                if success_count > 0:
+                    flash(f'Сообщение отправлено {success_count} подписчикам!', 'success')
+                if failed_count > 0:
+                    flash(f'Ошибка отправки {failed_count} подписчикам', 'error')
+                    
+            except Exception as e:
+                flash(f'Ошибка рассылки: {e}', 'error')
+            
             return redirect(url_for('broadcast'))
         else:
             flash('Введите текст сообщения!', 'error')
@@ -123,12 +143,23 @@ def send_broadcast():
         return jsonify({'error': 'Сообщение не может быть пустым'}), 400
     
     try:
-        # Здесь будет асинхронная отправка сообщения
-        # Для простоты пока просто возвращаем успех
-        success_count = len(bot.subscribers)
+        # Отправляем сообщение всем подписчикам
+        success_count = 0
+        failed_count = 0
+        
+        for user_id in bot.subscribers:
+            try:
+                bot.send_message_to_user(user_id, message)
+                success_count += 1
+            except Exception as e:
+                print(f"Ошибка отправки пользователю {user_id}: {e}")
+                failed_count += 1
+        
         return jsonify({
             'success': True,
-            'message': f'Сообщение отправлено {success_count} подписчикам'
+            'message': f'Сообщение отправлено {success_count} подписчикам',
+            'success_count': success_count,
+            'failed_count': failed_count
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

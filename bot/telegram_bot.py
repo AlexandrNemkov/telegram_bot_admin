@@ -40,18 +40,27 @@ class TelegramBot:
     def save_data(self):
         """Сохранение данных в файлы"""
         try:
+            # Создаем папку data если её нет
             os.makedirs('data', exist_ok=True)
             
-            with open('data/subscribers.json', 'w', encoding='utf-8') as f:
+            # Сохраняем подписчиков
+            subscribers_file = 'data/subscribers.json'
+            with open(subscribers_file, 'w', encoding='utf-8') as f:
                 json.dump({'subscribers': list(self.subscribers)}, f, ensure_ascii=False, indent=2)
+            logger.info(f"Подписчики сохранены в {subscribers_file}: {len(self.subscribers)} пользователей")
                 
-            with open('data/settings.json', 'w', encoding='utf-8') as f:
+            # Сохраняем настройки
+            settings_file = 'data/settings.json'
+            with open(settings_file, 'w', encoding='utf-8') as f:
                 json.dump({
                     'welcome_message': self.welcome_message,
                     'welcome_pdf_path': self.welcome_pdf_path
                 }, f, ensure_ascii=False, indent=2)
+            logger.info(f"Настройки сохранены в {settings_file}")
+                
         except Exception as e:
             logger.error(f"Ошибка сохранения данных: {e}")
+            raise
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /start"""
@@ -60,7 +69,11 @@ class TelegramBot:
         
         # Добавляем пользователя в подписчики
         self.subscribers.add(user_id)
+        logger.info(f"Добавлен подписчик: {user_id} ({username})")
+        
+        # Сохраняем данные
         self.save_data()
+        logger.info(f"Данные сохранены. Всего подписчиков: {len(self.subscribers)}")
         
         # Отправляем приветственное сообщение
         await update.message.reply_text(self.welcome_message)
@@ -144,6 +157,20 @@ class TelegramBot:
         self.welcome_pdf_path = pdf_path
         self.save_data()
     
+    def send_message_to_user(self, user_id: int, message: str):
+        """Отправка сообщения конкретному пользователю"""
+        try:
+            # Создаем временное приложение для отправки
+            from telegram import Bot
+            temp_bot = Bot(token=self.token)
+            
+            # Отправляем сообщение
+            temp_bot.send_message(chat_id=user_id, text=message)
+            return True
+        except Exception as e:
+            logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
+            return False
+
     def get_subscribers_count(self):
         """Получение количества подписчиков"""
         return len(self.subscribers)
