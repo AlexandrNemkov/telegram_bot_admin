@@ -178,9 +178,9 @@ def settings():
                     flash(f'Файл {filename} загружен, но не удалось обновить настройки бота. Ошибка: {e}', 'error')
                     print(f"Ошибка обновления настроек бота: {e}")
                     
-        except Exception as e:
-            flash(f'Ошибка загрузки файла: {e}', 'error')
-            print(f"Ошибка загрузки файла: {e}")
+            except Exception as e:
+                flash(f'Ошибка загрузки файла: {e}', 'error')
+                print(f"Ошибка загрузки файла: {e}")
         
         return redirect(url_for('settings'))
     
