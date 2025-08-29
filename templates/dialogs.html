@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Диалоги с пользователями{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>💬 Диалоги с пользователями</h2>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>👥 Пользователи</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group" id="usersList">
+                        {% for user in users %}
+                        <a href="#" class="list-group-item list-group-item-action user-item" 
+                           data-user-id="{{ user.id }}" data-username="{{ user.username }}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ user.username or 'user_' + user.id|string }}</h6>
+                                <small class="text-muted">{{ user.id }}</small>
+                            </div>
+                            <small class="text-muted">Последнее сообщение: {{ user.last_message_time or 'Нет' }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 id="dialogTitle">Выберите пользователя для начала диалога</h5>
+                </div>
+                <div class="card-body">
+                    <div id="messagesContainer" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px;">
+                        <p class="text-muted text-center">Сообщения появятся здесь</p>
+                    </div>
+                    
+                    <form id="messageForm" style="display: none;">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="messageInput" placeholder="Введите сообщение..." required>
+                            <button class="btn btn-primary" type="submit">📤 Отправить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentUserId = null;
+
+document.querySelectorAll('.user-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Убираем активный класс у всех элементов
+        document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+        // Добавляем активный класс к выбранному
+        this.classList.add('active');
+        
+        const userId = this.dataset.userId;
+        const username = this.dataset.username;
+        
+        currentUserId = userId;
+        document.getElementById('dialogTitle').textContent = `💬 Диалог с ${username}`;
+        document.getElementById('messageForm').style.display = 'block';
+        
+        // Загружаем сообщения
+        loadMessages(userId);
+    });
+});
+
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!currentUserId) return;
+    
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message) return;
+    
+    // Отправляем сообщение
+    sendMessage(currentUserId, message);
+    messageInput.value = '';
+});
+
+function loadMessages(userId) {
+    fetch(`/api/messages/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            displayMessages(data.messages);
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки сообщений:', error);
+        });
+}
+
+function sendMessage(userId, message) {
+    fetch('/api/send_message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: userId,
+            message: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Добавляем сообщение в чат
+            addMessageToChat('admin', message, new Date());
+        } else {
+            alert('Ошибка отправки: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка отправки:', error);
+        alert('Ошибка отправки сообщения');
+    });
+}
+
+function displayMessages(messages) {
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = '';
+    
+    messages.forEach(msg => {
+        addMessageToChat(msg.sender, msg.text, new Date(msg.timestamp));
+    });
+}
+
+function addMessageToChat(sender, text, timestamp) {
+    const container = document.getElementById('messagesContainer');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'mb-2';
+    
+    const isAdmin = sender === 'admin';
+    const timeStr = timestamp.toLocaleTimeString();
+    
+    messageDiv.innerHTML = `
+        <div class="d-flex ${isAdmin ? 'justify-content-end' : 'justify-content-start'}">
+            <div class="card ${isAdmin ? 'bg-primary text-white' : 'bg-light'}">
+                <div class="card-body py-2 px-3">
+                    <div class="mb-1">${text}</div>
+                    <small class="${isAdmin ? 'text-white-50' : 'text-muted'}">${timeStr}</small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+}
+</script>
+{% endblock %}

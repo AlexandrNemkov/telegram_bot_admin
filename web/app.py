@@ -231,6 +231,68 @@ def send_broadcast():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/dialogs')
+@login_required
+def dialogs():
+    """Страница диалогов с пользователями"""
+    try:
+        from bot.telegram_bot import TelegramBot
+        bot = TelegramBot()
+        
+        # Получаем список пользователей
+        users = []
+        for user_id in bot.subscribers:
+            users.append({
+                'id': user_id,
+                'username': f'user_{user_id}',
+                'last_message_time': None  # Пока не реализовано
+            })
+        
+        return render_template('dialogs.html', users=users)
+    except Exception as e:
+        flash(f'Ошибка загрузки диалогов: {e}', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/api/messages/<int:user_id>')
+@login_required
+def get_messages(user_id):
+    """Получение сообщений для конкретного пользователя"""
+    try:
+        from bot.telegram_bot import TelegramBot
+        bot = TelegramBot()
+        
+        # Пока возвращаем пустой список (будет реализовано позже)
+        messages = []
+        
+        return jsonify({'success': True, 'messages': messages})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/send_message', methods=['POST'])
+@login_required
+def send_message():
+    """Отправка сообщения пользователю"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        message = data.get('message')
+        
+        if not user_id or not message:
+            return jsonify({'success': False, 'error': 'Неверные параметры'})
+        
+        from bot.telegram_bot import TelegramBot
+        bot = TelegramBot()
+        
+        # Отправляем сообщение
+        result = bot.send_message_to_user(user_id, message)
+        
+        if result:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Ошибка отправки'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True, host='0.0.0.0', port=5000)
