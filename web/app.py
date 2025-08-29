@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, sen
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+from translit import transliterate_russian
 from config import Config
 import sys
 import os
@@ -141,7 +142,10 @@ def settings():
                     return redirect(url_for('settings'))
                 
                 # Проверяем расширение файла
-                filename = secure_filename(pdf_file.filename)
+                filename = secure_filename(pdf_file.filename).replace("-", "_").replace(" ", "_")
+                # Транслитерация русских символов
+                
+                filename = transliterate_russian(secure_filename(pdf_file.filename)).replace("-", "_").replace(" ", "_")
                 file_ext = os.path.splitext(filename)[1].lower()
                 
                 if file_ext not in app.config['UPLOAD_EXTENSIONS']:

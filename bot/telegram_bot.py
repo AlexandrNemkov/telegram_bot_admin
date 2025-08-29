@@ -251,6 +251,7 @@ class TelegramBot:
         except Exception as e:
             logger.error(f"Ошибка обновления файла: {e}")
             raise
+            raise
     
     def send_document_to_user(self, user_id: int, file_path: str, filename: str, caption: str = ""):
         """Отправка документа конкретному пользователю"""
