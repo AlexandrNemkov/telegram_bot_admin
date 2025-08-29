@@ -347,7 +347,19 @@ class TelegramBot:
             
             # Запускаем бота
             logger.info("Бот запущен!")
-            application.run_polling(allowed_updates=Update.ALL_TYPES)
+            
+            # Добавляем обработку ошибок
+            try:
+                application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+            except Exception as e:
+                if "Conflict" in str(e) or "getUpdates" in str(e):
+                    logger.error(f"Конфликт с другим экземпляром бота: {e}")
+                    logger.info("Попробуйте остановить другие экземпляры бота")
+                    raise
+                else:
+                    logger.error(f"Ошибка запуска бота: {e}")
+                    raise
+                    
         except Exception as e:
             logger.error(f"Ошибка запуска бота: {e}")
             raise

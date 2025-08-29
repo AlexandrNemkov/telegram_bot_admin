@@ -174,9 +174,15 @@ def settings():
         
         return redirect(url_for('settings'))
     
+    # Показываем информацию о лимитах
+    max_file_size = app.config.get('MAX_CONTENT_LENGTH_STR', '50MB')
+    allowed_extensions = ', '.join(app.config.get('UPLOAD_EXTENSIONS', []))
+    
     return render_template('settings.html', 
                          welcome_message=bot.welcome_message,
-                         has_pdf=bool(bot.welcome_pdf_path))
+                         has_pdf=bool(bot.welcome_pdf_path),
+                         max_file_size=max_file_size,
+                         allowed_extensions=allowed_extensions)
 
 @app.route('/subscribers')
 @login_required
