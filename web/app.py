@@ -151,6 +151,13 @@ def settings():
                 # Создаем папку uploads если её нет
                 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
                 
+                # Проверяем, есть ли уже загруженный файл
+                old_file_info = ""
+                if bot.welcome_pdf_path and os.path.exists(bot.welcome_pdf_path):
+                    old_size = os.path.getsize(bot.welcome_pdf_path)
+                    old_filename = os.path.basename(bot.welcome_pdf_path)
+                    old_file_info = f" (заменяет {old_filename}, {old_size} байт)"
+                
                 # Сохраняем файл
                 pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 pdf_file.save(pdf_path)
@@ -162,7 +169,7 @@ def settings():
                 success = bot.update_welcome_pdf(pdf_path)
                 
                 if success:
-                    flash(f'Файл {filename} успешно загружен и сохранен!', 'success')
+                    flash(f'Файл {filename} успешно загружен и сохранен!{old_file_info}', 'success')
                     print(f"Файл успешно обновлен в боте: {bot.welcome_pdf_path}")
                 else:
                     flash(f'Файл загружен, но не сохранен в боте!', 'error')

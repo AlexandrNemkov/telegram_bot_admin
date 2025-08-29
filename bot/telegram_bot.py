@@ -144,6 +144,37 @@ class TelegramBot:
         else:
             await update.message.reply_text("❌ PDF файл не настроен")
 
+    async def delete_pdf_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Удаление PDF файла"""
+        user_id = update.effective_user.id
+        
+        if self.welcome_pdf_path and os.path.exists(self.welcome_pdf_path):
+            try:
+                old_file = self.welcome_pdf_path
+                old_size = os.path.getsize(old_file)
+                old_filename = os.path.basename(old_file)
+                
+                # Удаляем файл физически
+                os.remove(old_file)
+                
+                # Очищаем путь в настройках
+                self.welcome_pdf_path = None
+                self.save_data()
+                
+                await update.message.reply_text(
+                    f"🗑️ PDF файл удален:\n"
+                    f"Имя: {old_filename}\n"
+                    f"Размер: {old_size} байт\n"
+                    f"Путь: {old_file}"
+                )
+                logger.info(f"PDF файл удален пользователем {user_id}: {old_file}")
+                
+            except Exception as e:
+                await update.message.reply_text(f"❌ Ошибка удаления файла: {e}")
+                logger.error(f"Ошибка удаления PDF файла: {e}")
+        else:
+            await update.message.reply_text("❌ PDF файл не найден")
+
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /help"""
         help_text = """
@@ -318,6 +349,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("status", self.status_command))
             application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
             application.add_handler(CommandHandler("check_pdf", self.check_pdf_command))
+            application.add_handler(CommandHandler("delete_pdf", self.delete_pdf_command)) # Добавляем обработчик для удаления PDF
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота
@@ -343,6 +375,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("status", self.status_command))
             application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
             application.add_handler(CommandHandler("check_pdf", self.check_pdf_command))
+            application.add_handler(CommandHandler("delete_pdf", self.delete_pdf_command)) # Добавляем обработчик для удаления PDF
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота
