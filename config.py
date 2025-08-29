@@ -13,5 +13,16 @@ class Config:
     MAX_CONTENT_LENGTH_STR = '50MB'
     
     # Дополнительные настройки для загрузки
-    UPLOAD_EXTENSIONS = {'.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png'}
+    UPLOAD_EXTENSIONS = {
+        # Документы
+        '.pdf', '.doc', '.docx', '.txt', '.rtf',
+        # Изображения
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp',
+        # Видео (популярные форматы)
+        '.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm',
+        # Аудио
+        '.mp3', '.wav', '.ogg', '.m4a',
+        # Архивы
+        '.zip', '.rar', '.7z'
+    }
     UPLOAD_MAX_FILES = 5
