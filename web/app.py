@@ -166,19 +166,17 @@ def settings():
                 print(f"Размер файла: {os.path.getsize(pdf_path)} байт")
                 
                 # Обновляем путь к файлу в боте
-                success = bot.update_welcome_pdf(pdf_path)
-                
-                if success:
+                try:
+                    # Просто обновляем путь - если файл физически загружен, значит все ок
+                    bot.update_welcome_pdf(pdf_path)
+                    
                     flash(f'Файл {filename} успешно загружен и сохранен!{old_file_info}', 'success')
                     print(f"Файл успешно обновлен в боте: {bot.welcome_pdf_path}")
-                else:
-                    # Если файл не сохранился в боте, но физически загружен
-                    flash(f'Файл {filename} загружен, но возникла проблема с сохранением настроек. Попробуйте еще раз.', 'warning')
-                    print(f"Проблема с сохранением файла в боте")
-                
-            except Exception as e:
-                flash(f'Ошибка загрузки файла: {e}', 'error')
-                print(f"Ошибка загрузки файла: {e}")
+                    
+                except Exception as e:
+                    # Если произошла ошибка при обновлении настроек
+                    flash(f'Файл {filename} загружен, но не удалось обновить настройки бота. Ошибка: {e}', 'error')
+                    print(f"Ошибка обновления настроек бота: {e}")
         
         return redirect(url_for('settings'))
     

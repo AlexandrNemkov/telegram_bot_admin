@@ -227,8 +227,30 @@ class TelegramBot:
     
     def update_welcome_pdf(self, pdf_path: str):
         """Обновление приветственного PDF файла"""
-        self.welcome_pdf_path = pdf_path
-        self.save_data()
+        try:
+            logger.info(f"Обновляем путь к файлу: {pdf_path}")
+            
+            # Если есть старый файл, удаляем его физически
+            if self.welcome_pdf_path and os.path.exists(self.welcome_pdf_path):
+                try:
+                    old_file = self.welcome_pdf_path
+                    os.remove(old_file)
+                    logger.info(f"Старый файл удален: {old_file}")
+                except Exception as e:
+                    logger.error(f"Ошибка удаления старого файла {old_file}: {e}")
+            
+            # Обновляем путь к новому файлу
+            self.welcome_pdf_path = pdf_path
+            file_size = os.path.getsize(pdf_path)
+            
+            # Сохраняем в файл
+            self.save_data()
+            
+            logger.info(f"Файл успешно обновлен: {pdf_path}, размер: {file_size} байт")
+            
+        except Exception as e:
+            logger.error(f"Ошибка обновления файла: {e}")
+            raise
     
     def send_document_to_user(self, user_id: int, file_path: str, filename: str, caption: str = ""):
         """Отправка документа конкретному пользователю"""
