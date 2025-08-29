@@ -245,6 +245,10 @@ class TelegramBot:
             
             # Сохраняем в файл
             self.save_data()
+            # Сохраняем настройки в файл
+            self.save_data()
+            # Сохраняем настройки в файл
+            self.save_data()
             
             logger.info(f"Файл успешно обновлен: {pdf_path}, размер: {file_size} байт")
             
