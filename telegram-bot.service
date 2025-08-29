@@ -1,6 +1,7 @@
 [Unit]
 Description=Telegram Bot Admin Panel
 After=network.target
+Wants=network.target
 
 [Service]
 Type=simple
@@ -14,6 +15,14 @@ Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
+
+# Автоматический перезапуск при сбоях
+RestartPreventExitStatus=0
+RestartForceExitStatus=1
+
+# Ограничения ресурсов
+LimitNOFILE=65536
+LimitNPROC=4096
 
 [Install]
 WantedBy=multi-user.target
