@@ -133,6 +133,8 @@ def settings():
         
         if pdf_file and pdf_file.filename:
             try:
+                print(f"Начинаем загрузку файла: {pdf_file.filename}")
+                
                 # Проверяем размер файла
                 if pdf_file.content_length and pdf_file.content_length > app.config['MAX_CONTENT_LENGTH']:
                     flash(f'Файл слишком большой! Максимальный размер: {app.config["MAX_CONTENT_LENGTH_STR"]}', 'error')
@@ -153,9 +155,18 @@ def settings():
                 pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 pdf_file.save(pdf_path)
                 
+                print(f"Файл сохранен: {pdf_path}")
+                print(f"Размер файла: {os.path.getsize(pdf_path)} байт")
+                
                 # Обновляем путь к файлу в боте
-                bot.update_welcome_pdf(pdf_path)
-                flash(f'Файл {filename} успешно загружен!', 'success')
+                success = bot.update_welcome_pdf(pdf_path)
+                
+                if success:
+                    flash(f'Файл {filename} успешно загружен и сохранен!', 'success')
+                    print(f"Файл успешно обновлен в боте: {bot.welcome_pdf_path}")
+                else:
+                    flash(f'Файл загружен, но не сохранен в боте!', 'error')
+                    print(f"Ошибка обновления файла в боте")
                 
             except Exception as e:
                 flash(f'Ошибка загрузки файла: {e}', 'error')

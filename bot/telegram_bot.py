@@ -122,6 +122,28 @@ class TelegramBot:
         else:
             await update.message.reply_text("❌ PDF файл не найден. Загрузите его в настройках веб-интерфейса.")
 
+    async def check_pdf_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Проверка текущего PDF файла"""
+        user_id = update.effective_user.id
+        
+        if self.welcome_pdf_path:
+            if os.path.exists(self.welcome_pdf_path):
+                file_size = os.path.getsize(self.welcome_pdf_path)
+                filename = os.path.basename(self.welcome_pdf_path)
+                
+                await update.message.reply_text(
+                    f"📄 Текущий PDF файл:\n"
+                    f"Имя: {filename}\n"
+                    f"Размер: {file_size} байт\n"
+                    f"Путь: {self.welcome_pdf_path}"
+                )
+            else:
+                await update.message.reply_text(
+                    f"❌ PDF файл не найден по пути:\n{self.welcome_pdf_path}"
+                )
+        else:
+            await update.message.reply_text("❌ PDF файл не настроен")
+
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка команды /help"""
         help_text = """
@@ -295,6 +317,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("help", self.help_command))
             application.add_handler(CommandHandler("status", self.status_command))
             application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
+            application.add_handler(CommandHandler("check_pdf", self.check_pdf_command))
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота
@@ -319,6 +342,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("help", self.help_command))
             application.add_handler(CommandHandler("status", self.status_command))
             application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
+            application.add_handler(CommandHandler("check_pdf", self.check_pdf_command))
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота
