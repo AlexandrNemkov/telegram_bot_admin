@@ -5,72 +5,7 @@
 {% block content %}
 
 
-<!-- Статистика в красивых карточках -->
-<div class="row mb-5">
-    <!-- Подписчики -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="stat-card stat-card-primary">
-            <div class="stat-card-icon">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-card-content">
-                <h2 class="stat-card-number">{{ subscribers_count }}</h2>
-                <p class="stat-card-label">Подписчиков</p>
-                <div class="stat-card-progress">
-                    <div class="progress-bar-fill" style="width: 75%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Диалоги -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="stat-card stat-card-success">
-            <div class="stat-card-icon">
-                <i class="fas fa-comments"></i>
-            </div>
-            <div class="stat-card-content">
-                <h2 class="stat-card-number">24</h2>
-                <p class="stat-card-label">Активных диалогов</p>
-                <div class="stat-card-progress">
-                    <div class="progress-bar-fill" style="width: 60%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Сообщения -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="stat-card stat-card-info">
-            <div class="stat-card-icon">
-                <i class="fas fa-envelope"></i>
-            </div>
-            <div class="stat-card-content">
-                <h2 class="stat-card-number">156</h2>
-                <p class="stat-card-label">Сообщений сегодня</p>
-                <div class="stat-card-progress">
-                    <div class="progress-bar-fill" style="width: 85%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Статус бота -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="stat-card stat-card-warning">
-            <div class="stat-card-icon">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="stat-card-content">
-                <h2 class="stat-card-number">🟢</h2>
-                <p class="stat-card-label">Бот активен</p>
-                <div class="stat-card-progress">
-                    <div class="progress-bar-fill" style="width: 100%"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Быстрые действия -->
 <div class="row mb-5">
@@ -218,66 +153,7 @@
     border-radius: 2px;
 }
 
-/* Статистические карточки */
-.stat-card {
-    background: white;
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
 
-.stat-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-}
-
-.stat-card-primary { border-left: 5px solid #667eea; }
-.stat-card-success { border-left: 5px solid #28a745; }
-.stat-card-info { border-left: 5px solid #17a2b8; }
-.stat-card-warning { border-left: 5px solid #ffc107; }
-
-.stat-card-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.8;
-}
-
-.stat-card-primary .stat-card-icon { color: #667eea; }
-.stat-card-success .stat-card-icon { color: #28a745; }
-.stat-card-info .stat-card-icon { color: #17a2b8; }
-.stat-card-warning .stat-card-icon { color: #ffc107; }
-
-.stat-card-number {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: #2c3e50;
-}
-
-.stat-card-label {
-    color: #6c757d;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stat-card-progress {
-    height: 4px;
-    background: #e9ecef;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 2px;
-    transition: width 0.6s ease;
-}
 
 /* Карточки действий */
 .action-card {
@@ -435,14 +311,9 @@
     }
 }
 
-.stat-card, .action-card, .info-card {
+.action-card, .info-card {
     animation: fadeInUp 0.6s ease forwards;
 }
-
-.stat-card:nth-child(1) { animation-delay: 0.1s; }
-.stat-card:nth-child(2) { animation-delay: 0.2s; }
-.stat-card:nth-child(3) { animation-delay: 0.3s; }
-.stat-card:nth-child(4) { animation-delay: 0.4s; }
 
 .action-card:nth-child(1) { animation-delay: 0.5s; }
 .action-card:nth-child(2) { animation-delay: 0.6s; }
