@@ -34,6 +34,54 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+def check_auth(username, password):
+    """Проверка аутентификации через базу данных"""
+    try:
+        from database import Database
+        import hashlib
+        
+        db = Database()
+        user = db.get_system_user(username)
+        
+        if user and user['is_active']:
+            # Проверяем пароль через werkzeug
+            if check_password_hash(user['password_hash'], password):
+                # Обновляем время последнего входа
+                db.update_last_login(user['id'])
+                return user
+        return None
+        
+    except Exception as e:
+        print(f"Ошибка проверки аутентификации: {e}")
+        # Fallback на старую систему
+        if username == Config.ADMIN_USERNAME and password == Config.ADMIN_PASSWORD:
+            return {'id': username, 'username': username, 'role': 'admin'}
+        return None
+
+def admin_required(f):
+    """Декоратор для проверки прав администратора"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
+        
+        # Проверить что пользователь - администратор
+        try:
+            from database import Database
+            db = Database()
+            user = db.get_system_user(current_user.id)
+            
+            if not user or user['role'] != 'admin':
+                flash('Доступ запрещен. Требуются права администратора.', 'error')
+                return redirect(url_for('dashboard'))
+                
+        except Exception as e:
+            flash('Ошибка проверки прав доступа.', 'error')
+            return redirect(url_for('dashboard'))
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Словарь для отслеживания попыток входа
 login_attempts = {}
 
@@ -90,39 +138,6 @@ def load_user(user_id):
             return User(user_id, Config.ADMIN_USERNAME)
         return None
 
-def check_auth(username, password):
-    """Проверка аутентификации через базу данных"""
-    try:
-        from database import Database
-        import hashlib
-        
-        db = Database()
-        user = db.get_system_user(username)
-        
-        if not user:
-            return False
-        
-        # Проверяем активность аккаунта
-        if not user['is_active']:
-            return False
-        
-        # Проверяем время истечения
-        if user['account_expires'] and user['account_expires'] < datetime.now().isoformat():
-            return False
-        
-        # Проверяем пароль безопасно
-        if check_password_hash(user['password_hash'], password):
-            # Обновляем время последнего входа
-            db.update_last_login(username)
-            return True
-        
-        return False
-        
-    except Exception as e:
-        print(f"Ошибка аутентификации: {e}")
-        # Fallback на старую систему
-        return username == Config.ADMIN_USERNAME and password == Config.ADMIN_PASSWORD
-
 @app.route('/')
 @login_required
 def dashboard():
@@ -136,8 +151,9 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
-        if check_auth(username, password):
-            user = User(username, username)
+        user_data = check_auth(username, password)
+        if user_data:
+            user = User(user_data['id'], user_data['username'])
             login_user(user)
             return redirect(url_for('dashboard'))
         else:
