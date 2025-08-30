@@ -121,7 +121,7 @@ class UserBot:
         try:
             from database import Database
             db = Database()
-            db.add_message(user_id, text, is_from_user)
+            db.add_message(user_id, text, is_from_user, self.user_id)  # Добавляем bot_user_id
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения сообщения: {e}")
     

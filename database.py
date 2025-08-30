@@ -623,3 +623,80 @@ class Database:
             ''', (bot_token, bot_username, datetime.now().isoformat(), user_id))
             conn.commit()
             return True
+
+    def get_users_for_bot(self, bot_user_id):
+        """Получить пользователей, которые общались с конкретным ботом"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT DISTINCT u.id, u.username, u.first_name, u.last_name, u.created_at
+                FROM users u
+                INNER JOIN messages m ON u.id = m.user_id
+                WHERE m.bot_user_id = ?
+                ORDER BY u.created_at DESC
+            ''', (bot_user_id,))
+            
+            users = []
+            for row in cursor.fetchall():
+                users.append({
+                    'id': row[0],
+                    'username': row[1],
+                    'first_name': row[2],
+                    'last_name': row[3],
+                    'created_at': row[4]
+                })
+            return users
+
+    def get_messages_between_users(self, user_id, bot_user_id):
+        """Получить сообщения между пользователем и конкретным ботом"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, text, timestamp, is_from_user
+                FROM messages
+                WHERE user_id = ? AND bot_user_id = ?
+                ORDER BY timestamp ASC
+            ''', (user_id, bot_user_id))
+            
+            messages = []
+            for row in cursor.fetchall():
+                messages.append({
+                    'id': row[0],
+                    'text': row[1],
+                    'timestamp': row[2],
+                    'is_from_user': row[3]
+                })
+            return messages
+
+    def get_last_message_for_user(self, user_id, bot_user_id):
+        """Получить последнее сообщение для пользователя от конкретного бота"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, text, timestamp, is_from_user
+                FROM messages
+                WHERE user_id = ? AND bot_user_id = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            ''', (user_id, bot_user_id))
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row[0],
+                    'text': row[1],
+                    'timestamp': row[2],
+                    'is_from_user': row[3]
+                }
+            return None
+
+    def add_message(self, user_id, text, is_from_user, bot_user_id=None):
+        """Добавить сообщение в базу данных"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO messages (user_id, text, timestamp, is_from_user, bot_user_id)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, text, datetime.now().isoformat(), is_from_user, bot_user_id))
+            conn.commit()
+            return True

@@ -391,15 +391,23 @@ def users():
 def dialogs():
     """Страница диалогов с пользователями"""
     try:
-        from bot.telegram_bot import TelegramBot
-        bot = TelegramBot()
+        from bot.user_bot_manager import bot_manager
+        from database import Database
         
-        # Получаем подробную информацию о пользователях
-        users = bot.get_users_info()
+        # Проверяем, настроен ли бот у текущего пользователя
+        user_bot = bot_manager.get_bot(current_user.id)
+        if not user_bot:
+            flash('Ваш бот не настроен. Сначала настройте бота в разделе "Настройки"', 'info')
+            return redirect(url_for('settings'))
         
-        # Добавляем время последнего сообщения (пока не реализовано)
+        # Получаем только пользователей, которые общались с ботом текущего пользователя
+        db = Database()
+        users = db.get_users_for_bot(current_user.id)
+        
+        # Добавляем время последнего сообщения
         for user in users:
-            user['last_message_time'] = None
+            last_message = db.get_last_message_for_user(user['id'], current_user.id)
+            user['last_message_time'] = last_message['timestamp'] if last_message else None
         
         return render_template('dialogs.html', users=users)
     except Exception as e:
@@ -448,7 +456,7 @@ def get_messages(user_id):
 
 @app.route('/api/send_message', methods=['POST'])
 @login_required
-def send_message():
+async def send_message():
     """Отправка сообщения пользователю"""
     try:
         data = request.get_json()
@@ -458,16 +466,26 @@ def send_message():
         if not user_id or not message:
             return jsonify({'success': False, 'error': 'Неверные параметры'})
         
-        from bot.telegram_bot import TelegramBot
-        bot = TelegramBot()
+        from bot.user_bot_manager import bot_manager
         
-        # Отправляем сообщение
-        result = bot.send_message_to_user(user_id, message)
+        # Получаем бота текущего пользователя
+        user_bot = bot_manager.get_bot(current_user.id)
+        if not user_bot:
+            return jsonify({'success': False, 'error': 'Ваш бот не настроен'})
         
-        if result:
+        # Отправляем сообщение через бота пользователя
+        try:
+            await user_bot.application.bot.send_message(chat_id=user_id, text=message)
+            
+            # Сохраняем сообщение в базу данных
+            from database import Database
+            db = Database()
+            db.add_message(user_id, message, False, current_user.id)  # False = от бота
+            
             return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'error': 'Ошибка отправки'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Ошибка отправки: {str(e)}'})
+            
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
