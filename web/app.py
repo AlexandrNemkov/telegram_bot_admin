@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 from translit import transliterate_russian
 from config import Config
 import sys
-import os
+from datetime import datetime
 
 # Добавляем путь к модулю бота
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'bot'))
@@ -42,12 +42,57 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    if user_id == Config.ADMIN_USERNAME:
-        return User(user_id, Config.ADMIN_USERNAME)
-    return None
+    """Загрузка пользователя из базы данных"""
+    try:
+        from database import Database
+        db = Database()
+        user = db.get_system_user(user_id)
+        
+        if user and user['is_active']:
+            return User(user['id'], user['username'])
+        
+        return None
+        
+    except Exception as e:
+        print(f"Ошибка загрузки пользователя: {e}")
+        # Fallback на старую систему
+        if user_id == Config.ADMIN_USERNAME:
+            return User(user_id, Config.ADMIN_USERNAME)
+        return None
 
 def check_auth(username, password):
-    return username == Config.ADMIN_USERNAME and password == Config.ADMIN_PASSWORD
+    """Проверка аутентификации через базу данных"""
+    try:
+        from database import Database
+        import hashlib
+        
+        db = Database()
+        user = db.get_system_user(username)
+        
+        if not user:
+            return False
+        
+        # Проверяем активность аккаунта
+        if not user['is_active']:
+            return False
+        
+        # Проверяем время истечения
+        if user['account_expires'] and user['account_expires'] < datetime.now().isoformat():
+            return False
+        
+        # Проверяем пароль
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        if user['password_hash'] == password_hash:
+            # Обновляем время последнего входа
+            db.update_last_login(username)
+            return True
+        
+        return False
+        
+    except Exception as e:
+        print(f"Ошибка аутентификации: {e}")
+        # Fallback на старую систему
+        return username == Config.ADMIN_USERNAME and password == Config.ADMIN_PASSWORD
 
 @app.route('/')
 @login_required
