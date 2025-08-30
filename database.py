@@ -351,37 +351,44 @@ class Database:
             logger.error(f"Ошибка создания системного пользователя {username}: {e}")
             return False
     
-    def get_system_user(self, username: str) -> Optional[Dict]:
-        """Получение системного пользователя по username"""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
+    def get_system_user(self, username_or_id):
+        """Получить пользователя системы по username или ID"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Проверяем, является ли параметр числом (ID) или строкой (username)
+            if isinstance(username_or_id, int) or str(username_or_id).isdigit():
+                # Поиск по ID
                 cursor.execute('''
                     SELECT id, username, password_hash, role, full_name, email, 
                            account_expires, is_active, created_at, last_login, created_by
-                    FROM system_users WHERE username = ?
-                ''', (username,))
-                
-                row = cursor.fetchone()
-                if row:
-                    return {
-                        'id': row[0],
-                        'username': row[1],
-                        'password_hash': row[2],
-                        'role': row[3],
-                        'full_name': row[4],
-                        'email': row[5],
-                        'account_expires': row[6],
-                        'is_active': bool(row[7]),
-                        'created_at': row[8],
-                        'last_login': row[9],
-                        'created_by': row[10]
-                    }
-                return None
-                
-        except Exception as e:
-            logger.error(f"Ошибка получения системного пользователя {username}: {e}")
+                    FROM system_users 
+                    WHERE id = ?
+                ''', (int(username_or_id),))
+            else:
+                # Поиск по username
+                cursor.execute('''
+                    SELECT id, username, password_hash, role, full_name, email, 
+                           account_expires, is_active, created_at, last_login, created_by
+                    FROM system_users 
+                    WHERE username = ?
+                ''', (username_or_id,))
+            
+            result = cursor.fetchone()
+            if result:
+                return {
+                    'id': result[0],
+                    'username': result[1],
+                    'password_hash': result[2],
+                    'role': result[3],
+                    'full_name': result[4],
+                    'email': result[5],
+                    'account_expires': result[6],
+                    'is_active': result[7],
+                    'created_at': result[8],
+                    'last_login': result[9],
+                    'created_by': result[10]
+                }
             return None
     
     def update_system_user_password(self, username: str, new_password_hash: str) -> bool:

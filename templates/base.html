@@ -75,14 +75,25 @@
                         <a class="nav-link {% if request.endpoint == 'subscribers' %}active{% endif %}" href="{{ url_for('subscribers') }}">
                             <i class="fas fa-users me-2"></i> Подписчики
                         </a>
-                        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
-                            <i class="fas fa-cog me-2"></i> Настройки
-                        </a>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('settings') }}">
+                                <i class="fas fa-cog me-2"></i>Настройки
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('profile') }}">
+                                <i class="fas fa-user me-2"></i>Мой профиль
+                            </a>
+                        </li>
+                        {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('users') }}">
+                                <i class="fas fa-users me-2"></i>Пользователи
+                            </a>
+                        </li>
+                        {% endif %}
                         <a class="nav-link {% if request.endpoint == 'dialogs' %}active{% endif %}" href="{{ url_for('dialogs') }}">
                             <i class="fas fa-comments me-2"></i> 💬 Диалоги
-                        </a>
-                        <a class="nav-link {% if request.endpoint == 'users' %}active{% endif %}" href="{{ url_for('users') }}">
-                            <i class="fas fa-users-cog me-2"></i> 👥 Пользователи
                         </a>
                         <hr class="text-white-50">
                         <a class="nav-link" href="{{ url_for('logout') }}">

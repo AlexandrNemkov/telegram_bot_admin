@@ -502,6 +502,59 @@ def update_user_expiry(username):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/profile')
+@login_required
+def profile():
+    """Страница профиля пользователя"""
+    try:
+        from database import Database
+        db = Database()
+        
+        # Получить информацию о текущем пользователе
+        user_info = db.get_system_user(current_user.id)
+        
+        return render_template('profile.html', user_info=user_info)
+    except Exception as e:
+        flash(f'Ошибка загрузки профиля: {e}', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/api/profile/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """Изменение пароля пользователя"""
+    try:
+        from database import Database
+        db = Database()
+        
+        data = request.get_json()
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        
+        if not current_password or not new_password:
+            return jsonify({'success': False, 'error': 'Все поля обязательны'})
+        
+        # Проверить текущий пароль
+        user = db.get_system_user(current_user.id)
+        if not user:
+            return jsonify({'success': False, 'error': 'Пользователь не найден'})
+        
+        if not check_password_hash(user['password_hash'], current_password):
+            return jsonify({'success': False, 'error': 'Неверный текущий пароль'})
+        
+        # Проверить сложность нового пароля
+        if len(new_password) < 8:
+            return jsonify({'success': False, 'error': 'Новый пароль должен содержать минимум 8 символов'})
+        
+        # Обновить пароль
+        new_password_hash = generate_password_hash(new_password)
+        if db.update_system_user_password(current_user.id, new_password_hash):
+            return jsonify({'success': True, 'message': 'Пароль успешно изменен'})
+        else:
+            return jsonify({'success': False, 'error': 'Ошибка обновления пароля'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True, host='0.0.0.0', port=5000)

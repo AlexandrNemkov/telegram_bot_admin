@@ -14,7 +14,7 @@
                     <h5>📝 Приветственное сообщение</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('update_welcome_message') }}">
+                    <form method="POST">
                         <div class="mb-3">
                             <label for="welcome_message" class="form-label">Сообщение приветствия:</label>
                             <textarea class="form-control" id="welcome_message" name="welcome_message" rows="3" required>{{ settings.welcome_message }}</textarea>
@@ -31,13 +31,13 @@
                     <h5>📄 Файл приветствия</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('update_welcome_pdf') }}" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label for="welcome_pdf" class="form-label">Загрузить PDF/видео файл:</label>
                             <input type="file" class="form-control" id="welcome_pdf" name="welcome_pdf" accept=".pdf,.mp4,.avi,.mov,.mkv">
                             <div class="form-text">
-                                <strong>Максимальный размер:</strong> 50MB<br>
-                                <strong>Разрешенные форматы:</strong> PDF, MP4, AVI, MOV, MKV
+                                <strong>Максимальный размер:</strong> {{ max_file_size }}<br>
+                                <strong>Разрешенные форматы:</strong> {{ allowed_extensions }}
                             </div>
                         </div>
                         
