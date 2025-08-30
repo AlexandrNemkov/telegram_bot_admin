@@ -3,14 +3,14 @@
 Скрипт для инициализации первого администратора системы
 """
 
-import hashlib
 import os
 import sys
+from werkzeug.security import generate_password_hash
 from database import Database
 
 def hash_password(password: str) -> str:
-    """Хеширование пароля"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Безопасное хеширование пароля"""
+    return generate_password_hash(password)
 
 def init_admin():
     """Инициализация первого администратора"""

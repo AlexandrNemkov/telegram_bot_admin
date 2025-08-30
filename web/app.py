@@ -8,6 +8,8 @@ from translit import transliterate_russian
 from config import Config
 import sys
 from datetime import datetime
+from functools import wraps
+import time
 
 # Добавляем путь к модулю бота
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'bot'))
@@ -31,6 +33,34 @@ app.config['UPLOAD_MAX_FILES'] = 5
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Словарь для отслеживания попыток входа
+login_attempts = {}
+
+def rate_limit(max_attempts=5, window=300):
+    """Декоратор для ограничения попыток входа"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            ip = request.remote_addr
+            now = time.time()
+            
+            # Очищаем старые попытки
+            if ip in login_attempts:
+                login_attempts[ip] = [t for t in login_attempts[ip] if now - t < window]
+            
+            # Проверяем количество попыток
+            if ip in login_attempts and len(login_attempts[ip]) >= max_attempts:
+                return jsonify({'error': 'Слишком много попыток входа. Попробуйте позже.'}), 429
+            
+            # Добавляем текущую попытку
+            if ip not in login_attempts:
+                login_attempts[ip] = []
+            login_attempts[ip].append(now)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Инициализация бота
 bot = TelegramBot()
@@ -80,9 +110,8 @@ def check_auth(username, password):
         if user['account_expires'] and user['account_expires'] < datetime.now().isoformat():
             return False
         
-        # Проверяем пароль
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        if user['password_hash'] == password_hash:
+        # Проверяем пароль безопасно
+        if check_password_hash(user['password_hash'], password):
             # Обновляем время последнего входа
             db.update_last_login(username)
             return True
@@ -101,6 +130,7 @@ def dashboard():
     return render_template('dashboard.html', subscribers_count=subscribers_count)
 
 @app.route('/login', methods=['GET', 'POST'])
+@rate_limit(max_attempts=5, window=300)
 def login():
     if request.method == 'POST':
         username = request.form['username']
@@ -418,8 +448,8 @@ def create_user():
         if existing_user:
             return jsonify({'success': False, 'error': 'Пользователь с таким username уже существует'})
         
-        # Хешируем пароль
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        # Хешируем пароль безопасно
+        password_hash = generate_password_hash(password)
         
         # Создаем пользователя
         if db.create_system_user(username, password_hash, role, full_name, email, account_expires, current_user.id):
@@ -446,8 +476,8 @@ def update_user_password(username):
         
         db = Database()
         
-        # Хешируем новый пароль
-        password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+        # Хешируем новый пароль безопасно
+        password_hash = generate_password_hash(new_password)
         
         # Обновляем пароль
         if db.update_system_user_password(username, password_hash):
