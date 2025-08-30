@@ -141,7 +141,7 @@ def settings():
                     flash(f'Файл слишком большой! Максимальный размер: {app.config["MAX_CONTENT_LENGTH_STR"]}', 'error')
                     return redirect(url_for('settings'))
                 
-                                # Проверяем расширение файла
+                # Проверяем расширение файла
                 filename = secure_filename(pdf_file.filename).replace("-", "_").replace(" ", "_")
                 # Транслитерация русских символов
                 
