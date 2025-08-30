@@ -156,20 +156,39 @@ class TelegramBot:
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка сообщений от пользователей"""
-        user_id = update.effective_user.id
-        text = update.message.text
-        username = update.effective_user.username
-        first_name = update.effective_user.first_name
-        last_name = update.effective_user.last_name
-        
-        # Добавляем пользователя в базу данных если его там нет
-        self.db.add_user(user_id, username, first_name, last_name)
-        
-        # Сохраняем сообщение пользователя
-        logger.info(f"Сохраняем сообщение от пользователя {user_id}: {text[:50]}...")
-        self.db.add_message(user_id, text, is_from_user=True)
-        
-        logger.info(f"Сообщение от пользователя {user_id} сохранено в БД")
+        try:
+            user_id = update.effective_user.id
+            text = update.message.text
+            username = update.effective_user.username
+            first_name = update.effective_user.first_name
+            last_name = update.effective_user.last_name
+            
+            logger.info(f"🔔 ПОЛУЧЕНО СООБЩЕНИЕ от пользователя {user_id}")
+            logger.info(f"📝 Текст: {text[:100]}...")
+            logger.info(f"👤 Username: {username}, First: {first_name}, Last: {last_name}")
+            
+            # Добавляем пользователя в базу данных если его там нет
+            logger.info(f"💾 Добавляем/обновляем пользователя {user_id} в БД...")
+            if self.db.add_user(user_id, username, first_name, last_name):
+                logger.info(f"✅ Пользователь {user_id} добавлен/обновлен в БД")
+            else:
+                logger.error(f"❌ Ошибка добавления пользователя {user_id} в БД")
+            
+            # Сохраняем сообщение пользователя
+            logger.info(f"💾 Сохраняем сообщение от пользователя {user_id} в БД...")
+            if self.db.add_message(user_id, text, is_from_user=True):
+                logger.info(f"✅ Сообщение от пользователя {user_id} сохранено в БД")
+            else:
+                logger.error(f"❌ Ошибка сохранения сообщения от пользователя {user_id} в БД")
+            
+            # Проверяем что сообщение действительно сохранилось
+            messages = self.db.get_user_messages(user_id)
+            logger.info(f"📊 Всего сообщений у пользователя {user_id}: {len(messages)}")
+            
+        except Exception as e:
+            logger.error(f"❌ КРИТИЧЕСКАЯ ОШИБКА в handle_message: {e}")
+            import traceback
+            logger.error(f"🔍 Traceback: {traceback.format_exc()}")
 
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка нажатий на кнопки"""

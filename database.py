@@ -156,10 +156,24 @@ class Database:
     def add_message(self, user_id: int, text: str, is_from_user: bool = True) -> bool:
         """Добавление сообщения"""
         try:
+            logger.info(f"🔍 Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}")
+            
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
+                # Проверяем существует ли пользователь
+                cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
+                user_exists = cursor.fetchone()
+                
+                if not user_exists:
+                    logger.warning(f"⚠️ Пользователь {user_id} не найден в БД, создаем...")
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO users (id, username, first_name, last_name, full_name)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (user_id, f'user_{user_id}', '', '', f'User {user_id}'))
+                
                 # Добавляем сообщение
+                logger.info(f"💾 Добавляем сообщение в БД...")
                 cursor.execute('''
                     INSERT INTO messages (user_id, text, is_from_user, timestamp)
                     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
@@ -171,11 +185,13 @@ class Database:
                 ''', (user_id,))
                 
                 conn.commit()
-                logger.info(f"Сообщение добавлено для пользователя {user_id}")
+                logger.info(f"✅ Сообщение успешно добавлено для пользователя {user_id}")
                 return True
                 
         except Exception as e:
-            logger.error(f"Ошибка добавления сообщения для пользователя {user_id}: {e}")
+            logger.error(f"❌ Ошибка добавления сообщения для пользователя {user_id}: {e}")
+            import traceback
+            logger.error(f"🔍 Traceback: {traceback.format_exc()}")
             return False
     
     def get_user_messages(self, user_id: int, limit: int = 100) -> List[Dict]:
