@@ -147,17 +147,42 @@ def load_user(user_id):
 def dashboard():
     try:
         from bot.user_bot_manager import bot_manager
-        user_bot = bot_manager.get_bot(current_user.id)
+        from database import Database
+        from datetime import datetime, timedelta
         
-        if user_bot:
-            subscribers_count = user_bot.get_subscribers_count()
-        else:
-            subscribers_count = 0
-            
-        return render_template('dashboard.html', subscribers_count=subscribers_count)
+        # Получаем статистику для текущего пользователя
+        db = Database()
+        
+        # Количество активных подписчиков (кто писал за последние 30 дней)
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+        active_subscribers = db.get_active_subscribers_count(current_user.id, thirty_days_ago)
+        
+        # Количество новых подписчиков за последние 24 часа
+        yesterday = (datetime.now() - timedelta(days=1)).isoformat()
+        new_subscribers_24h = db.get_new_subscribers_count(current_user.id, yesterday)
+        
+        # Общее количество подписчиков
+        total_subscribers = db.get_total_subscribers_count(current_user.id)
+        
+        # Количество сообщений за последние 24 часа
+        messages_24h = db.get_messages_count_24h(current_user.id, yesterday)
+        
+        stats = {
+            'active_subscribers': active_subscribers,
+            'new_subscribers_24h': new_subscribers_24h,
+            'total_subscribers': total_subscribers,
+            'messages_24h': messages_24h
+        }
+        
+        return render_template('dashboard.html', stats=stats)
     except Exception as e:
         print(f"Ошибка загрузки дашборда: {e}")
-        return render_template('dashboard.html', subscribers_count=0)
+        return render_template('dashboard.html', stats={
+            'active_subscribers': 0,
+            'new_subscribers_24h': 0,
+            'total_subscribers': 0,
+            'messages_24h': 0
+        })
 
 @app.route('/login', methods=['GET', 'POST'])
 @rate_limit(max_attempts=5, window=300)

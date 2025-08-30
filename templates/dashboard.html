@@ -83,8 +83,17 @@
                         <i class="fas fa-users"></i>
                     </div>
                     <div class="activity-content">
-                        <h6>{{ subscribers_count }} активных подписчиков</h6>
-                        <p class="text-muted">За последние 24 часа: +3 новых</p>
+                        <h6>{{ stats.active_subscribers }} активных подписчиков</h6>
+                        <p class="text-muted">За последние 24 часа: +{{ stats.new_subscribers_24h }} новых</p>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon activity-primary">
+                        <i class="fas fa-comment-dots"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h6>{{ stats.messages_24h }} сообщений за 24 часа</h6>
+                        <p class="text-muted">Всего подписчиков: {{ stats.total_subscribers }}</p>
                     </div>
                 </div>
                 <div class="activity-item">

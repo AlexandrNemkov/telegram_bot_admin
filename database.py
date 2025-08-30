@@ -700,3 +700,52 @@ class Database:
             ''', (user_id, text, datetime.now().isoformat(), is_from_user, bot_user_id))
             conn.commit()
             return True
+
+    def get_active_subscribers_count(self, bot_user_id, since_date):
+        """Получить количество активных подписчиков с определенной даты"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT COUNT(DISTINCT user_id) 
+                FROM messages 
+                WHERE bot_user_id = ? AND timestamp >= ? AND is_from_user = 1
+            ''', (bot_user_id, since_date))
+            return cursor.fetchone()[0] or 0
+
+    def get_new_subscribers_count(self, bot_user_id, since_date):
+        """Получить количество новых подписчиков с определенной даты"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT COUNT(DISTINCT user_id) 
+                FROM messages 
+                WHERE bot_user_id = ? AND timestamp >= ? AND is_from_user = 1
+                AND user_id NOT IN (
+                    SELECT DISTINCT user_id 
+                    FROM messages 
+                    WHERE bot_user_id = ? AND timestamp < ? AND is_from_user = 1
+                )
+            ''', (bot_user_id, since_date, bot_user_id, since_date))
+            return cursor.fetchone()[0] or 0
+
+    def get_total_subscribers_count(self, bot_user_id):
+        """Получить общее количество подписчиков бота"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT COUNT(DISTINCT user_id) 
+                FROM messages 
+                WHERE bot_user_id = ? AND is_from_user = 1
+            ''', (bot_user_id,))
+            return cursor.fetchone()[0] or 0
+
+    def get_messages_count_24h(self, bot_user_id, since_date):
+        """Получить количество сообщений за последние 24 часа"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT COUNT(*) 
+                FROM messages 
+                WHERE bot_user_id = ? AND timestamp >= ?
+            ''', (bot_user_id, since_date))
+            return cursor.fetchone()[0] or 0
