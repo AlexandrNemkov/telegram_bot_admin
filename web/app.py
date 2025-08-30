@@ -199,79 +199,72 @@ def broadcast():
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    if request.method == 'POST':
-        welcome_message = request.form.get('welcome_message')
-        pdf_file = request.files.get('welcome_pdf')
+    """Страница настроек (индивидуальная для каждого пользователя)"""
+    try:
+        from database import Database
+        db = Database()
         
-        if welcome_message:
-            bot.update_welcome_message(welcome_message)
-            flash('Приветственное сообщение обновлено!', 'success')
-        
-        if pdf_file and pdf_file.filename:
-            try:
-                print(f"Начинаем загрузку файла: {pdf_file.filename}")
-                
-                # Проверяем размер файла
-                if pdf_file.content_length and pdf_file.content_length > app.config['MAX_CONTENT_LENGTH']:
-                    flash(f'Файл слишком большой! Максимальный размер: {app.config["MAX_CONTENT_LENGTH_STR"]}', 'error')
-                    return redirect(url_for('settings'))
-                
-                # Проверяем расширение файла
-                filename = secure_filename(pdf_file.filename).replace("-", "_").replace(" ", "_")
-                # Транслитерация русских символов
-                
-                filename = transliterate_russian(secure_filename(pdf_file.filename)).replace("-", "_").replace(" ", "_")
-                file_ext = os.path.splitext(filename)[1].lower()
-                
-                if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-                    flash(f'Неподдерживаемый тип файла! Разрешены: {", ".join(app.config["UPLOAD_EXTENSIONS"])}', 'error')
-                    return redirect(url_for('settings'))
-                
-                # Создаем папку uploads если её нет
-                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-                
-                # Проверяем, есть ли уже загруженный файл
-                old_file_info = ""
-                if bot.welcome_pdf_path and os.path.exists(bot.welcome_pdf_path):
-                    old_size = os.path.getsize(bot.welcome_pdf_path)
-                    old_filename = os.path.basename(bot.welcome_pdf_path)
-                    old_file_info = f" (заменяет {old_filename}, {old_size} байт)"
-                
-                # Сохраняем файл
-                pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                pdf_file.save(pdf_path)
-                
-                print(f"Файл сохранен: {pdf_path}")
-                print(f"Размер файла: {os.path.getsize(pdf_path)} байт")
-                
-                # Обновляем путь к файлу в боте
+        if request.method == 'POST':
+            welcome_message = request.form.get('welcome_message')
+            pdf_file = request.files.get('welcome_pdf')
+            
+            if welcome_message:
+                if db.update_user_welcome_message(current_user.id, welcome_message):
+                    flash('Приветственное сообщение обновлено!', 'success')
+                else:
+                    flash('Ошибка обновления сообщения!', 'error')
+            
+            if pdf_file and pdf_file.filename:
                 try:
-                    # Просто обновляем путь - если файл физически загружен, значит все ок
-                    bot.update_welcome_pdf(pdf_path)
+                    print(f"Начинаем загрузку файла: {pdf_file.filename}")
                     
-                    flash(f'Файл {filename} успешно загружен и сохранен!{old_file_info}', 'success')
-                    print(f"Файл успешно обновлен в боте: {bot.welcome_pdf_path}")
+                    # Проверяем размер файла
+                    if pdf_file.content_length and pdf_file.content_length > app.config['MAX_CONTENT_LENGTH']:
+                        flash(f'Файл слишком большой! Максимальный размер: {app.config["MAX_CONTENT_LENGTH_STR"]}', 'error')
+                        return redirect(url_for('settings'))
                     
+                    # Проверяем расширение файла
+                    filename = secure_filename(pdf_file.filename)
+                    filename = transliterate_russian(filename).replace("-", "_").replace(" ", "_")
+                    file_ext = os.path.splitext(filename)[1].lower()
+                    
+                    if file_ext not in app.config['UPLOAD_EXTENSIONS']:
+                        flash(f'Неподдерживаемый тип файла! Разрешены: {", ".join(app.config["UPLOAD_EXTENSIONS"])}', 'error')
+                        return redirect(url_for('settings'))
+                    
+                    # Создаем папку uploads если её нет
+                    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                    
+                    # Сохраняем файл
+                    pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    pdf_file.save(pdf_path)
+                    
+                    # Обновляем путь к файлу в базе данных
+                    if db.update_user_welcome_pdf(current_user.id, pdf_path):
+                        flash(f'Файл {filename} успешно загружен!', 'success')
+                    else:
+                        flash('Ошибка обновления пути к файлу!', 'error')
+                        
                 except Exception as e:
-                    # Если произошла ошибка при обновлении настроек
-                    flash(f'Файл {filename} загружен, но не удалось обновить настройки бота. Ошибка: {e}', 'error')
-                    print(f"Ошибка обновления настроек бота: {e}")
-                    
-            except Exception as e:
-                flash(f'Ошибка загрузки файла: {e}', 'error')
-                print(f"Ошибка загрузки файла: {e}")
+                    flash(f'Ошибка загрузки файла: {e}', 'error')
+            
+            return redirect(url_for('settings'))
         
-        return redirect(url_for('settings'))
-    
-    # Показываем информацию о лимитах
-    max_file_size = app.config.get('MAX_CONTENT_LENGTH_STR', '50MB')
-    allowed_extensions = ', '.join(app.config.get('UPLOAD_EXTENSIONS', []))
-    
-    return render_template('settings.html', 
-                         welcome_message=bot.welcome_message,
-                         has_pdf=bool(bot.welcome_pdf_path),
-                         max_file_size=max_file_size,
-                         allowed_extensions=allowed_extensions)
+        # GET запрос - показать настройки
+        user_settings = db.get_user_settings(current_user.id)
+        
+        # Показываем информацию о лимитах
+        max_file_size = app.config.get('MAX_CONTENT_LENGTH_STR', '50MB')
+        allowed_extensions = ', '.join(app.config.get('UPLOAD_EXTENSIONS', []))
+        
+        return render_template('settings.html', 
+                             settings=user_settings,
+                             max_file_size=max_file_size,
+                             allowed_extensions=allowed_extensions)
+                             
+    except Exception as e:
+        flash(f'Ошибка загрузки настроек: {e}', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/subscribers')
 @login_required

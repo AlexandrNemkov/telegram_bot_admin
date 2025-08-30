@@ -28,7 +28,9 @@ class Database:
                         last_name TEXT,
                         full_name TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_message_text TEXT,
+                        last_message_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
                 
@@ -44,22 +46,23 @@ class Database:
                     )
                 ''')
                 
-                # Таблица настроек
+                # Таблица настроек (общие для системы)
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS settings (
-                        key TEXT PRIMARY KEY,
-                        value TEXT NOT NULL,
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        key TEXT UNIQUE NOT NULL,
+                        value TEXT,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
                 
-                # Таблица пользователей системы (admin/user)
+                # Таблица пользователей системы
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS system_users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT UNIQUE NOT NULL,
                         password_hash TEXT NOT NULL,
-                        role TEXT NOT NULL DEFAULT 'user',
+                        role TEXT DEFAULT 'user',
                         full_name TEXT,
                         email TEXT,
                         account_expires TIMESTAMP,
@@ -68,6 +71,19 @@ class Database:
                         last_login TIMESTAMP,
                         created_by INTEGER,
                         FOREIGN KEY (created_by) REFERENCES system_users (id)
+                    )
+                ''')
+                
+                # Таблица индивидуальных настроек пользователей
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS user_settings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        welcome_message TEXT DEFAULT 'Добро пожаловать! 👋',
+                        welcome_pdf_path TEXT DEFAULT '',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES system_users (id)
                     )
                 ''')
                 
@@ -506,3 +522,60 @@ class Database:
         except Exception as e:
             logger.error(f"Ошибка обновления времени входа для {username}: {e}")
             return False
+
+    def get_user_settings(self, user_id):
+        """Получить настройки пользователя"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT welcome_message, welcome_pdf_path, created_at, updated_at
+                FROM user_settings 
+                WHERE user_id = ?
+            ''', (user_id,))
+            
+            result = cursor.fetchone()
+            if result:
+                return {
+                    'welcome_message': result[0],
+                    'welcome_pdf_path': result[1],
+                    'created_at': result[2],
+                    'updated_at': result[3]
+                }
+            else:
+                # Создать настройки по умолчанию для пользователя
+                cursor.execute('''
+                    INSERT INTO user_settings (user_id, welcome_message, welcome_pdf_path)
+                    VALUES (?, ?, ?)
+                ''', (user_id, 'Добро пожаловать! 👋', ''))
+                conn.commit()
+                
+                return {
+                    'welcome_message': 'Добро пожаловать! 👋',
+                    'welcome_pdf_path': '',
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
+                }
+
+    def update_user_welcome_message(self, user_id, message):
+        """Обновить приветственное сообщение пользователя"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE user_settings 
+                SET welcome_message = ?, updated_at = ?
+                WHERE user_id = ?
+            ''', (message, datetime.now().isoformat(), user_id))
+            conn.commit()
+            return True
+
+    def update_user_welcome_pdf(self, user_id, pdf_path):
+        """Обновить путь к PDF файлу пользователя"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE user_settings 
+                SET welcome_pdf_path = ?, updated_at = ?
+                WHERE user_id = ?
+            ''', (pdf_path, datetime.now().isoformat(), user_id))
+            conn.commit()
+            return True
