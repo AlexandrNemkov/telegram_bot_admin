@@ -267,18 +267,27 @@ def get_messages(user_id):
         bot = TelegramBot()
         logger.info(f"Запрашиваем сообщения для пользователя {user_id}")
         
-        messages = bot.get_user_messages(user_id)
-        logger.info(f"Получено {len(messages)} сообщений для пользователя {user_id}")
+        # Проверяем доступ к базе данных
+        try:
+            messages = bot.get_user_messages(user_id)
+            logger.info(f"Получено {len(messages)} сообщений для пользователя {user_id}")
+        except Exception as db_error:
+            logger.error(f"Ошибка доступа к базе данных: {db_error}")
+            return jsonify({'success': False, 'error': f'Ошибка БД: {str(db_error)}'})
         
         # Форматируем сообщения для фронтенда
         formatted_messages = []
         for msg in messages:
-            formatted_messages.append({
-                'id': msg['id'],
-                'text': msg['text'],
-                'timestamp': msg['timestamp'],
-                'is_from_user': msg['is_from_user']
-            })
+            try:
+                formatted_messages.append({
+                    'id': msg['id'],
+                    'text': msg['text'],
+                    'timestamp': msg['timestamp'],
+                    'is_from_user': msg['is_from_user']
+                })
+            except KeyError as key_error:
+                logger.error(f"Ошибка форматирования сообщения: {key_error}, сообщение: {msg}")
+                continue
         
         logger.info(f"Отправляем {len(formatted_messages)} отформатированных сообщений")
         return jsonify({'success': True, 'messages': formatted_messages})

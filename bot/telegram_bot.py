@@ -32,7 +32,7 @@ class TelegramBot:
         
         # Добавляем пользователя в базу данных
         self.db.add_user(user_id, username, first_name, last_name)
-        logger.info(f"Добавлен подписчик: {user_id} ({username or first_name})")
+        logger.info(f"Добавлен подписчик: {user_id} ({username or first_name or f'user_{user_id}'})")
         
         # Отправляем приветственное сообщение
         await update.message.reply_text(self.welcome_message)
@@ -230,8 +230,46 @@ class TelegramBot:
             raise
     
     def get_user_info(self, user_id: int):
-        """Получение информации о пользователе из базы данных"""
-        return self.db.get_user(user_id)
+        """Получение информации о пользователе из базы данных или Telegram API"""
+        # Сначала пробуем получить из БД
+        user_info = self.db.get_user(user_id)
+        if user_info and user_info.get('username') and user_info.get('first_name'):
+            return user_info
+        
+        # Если в БД нет полной информации, получаем из Telegram API
+        try:
+            import requests
+            url = f"https://api.telegram.org/bot{self.token}/getChat"
+            data = {'chat_id': user_id}
+            
+            response = requests.post(url, data=data)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('ok'):
+                    user_data = result['result']
+                    
+                    # Обновляем информацию в БД
+                    username = user_data.get('username')
+                    first_name = user_data.get('first_name', '')
+                    last_name = user_data.get('last_name', '')
+                    
+                    self.db.add_user(user_id, username, first_name, last_name)
+                    
+                    return {
+                        'id': user_data['id'],
+                        'username': username,
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'full_name': f"{first_name} {last_name}".strip(),
+                        'avatar_url': None
+                    }
+            
+            return user_info  # Возвращаем то что есть в БД
+            
+        except Exception as e:
+            logger.error(f"Ошибка получения информации о пользователе {user_id} из API: {e}")
+            return user_info  # Возвращаем то что есть в БД
 
 
     
