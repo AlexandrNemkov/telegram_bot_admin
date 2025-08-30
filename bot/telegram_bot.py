@@ -19,6 +19,7 @@ class TelegramBot:
         self.subscribers = set()
         self.welcome_message = "Добро пожаловать! 👋"
         self.welcome_pdf_path = None
+        self.messages = {}  # Словарь для хранения сообщений: {user_id: [messages]}
         self.load_data()
         
     def load_data(self):
@@ -34,6 +35,10 @@ class TelegramBot:
                     settings = json.load(f)
                     self.welcome_message = settings.get('welcome_message', self.welcome_message)
                     self.welcome_pdf_path = settings.get('welcome_pdf_path')
+            
+            if os.path.exists('data/messages.json'):
+                with open('data/messages.json', 'r', encoding='utf-8') as f:
+                    self.messages = json.load(f)
         except Exception as e:
             logger.error(f"Ошибка загрузки данных: {e}")
     
@@ -57,6 +62,12 @@ class TelegramBot:
                     'welcome_pdf_path': self.welcome_pdf_path
                 }, f, ensure_ascii=False, indent=2)
             logger.info(f"Настройки сохранены в {settings_file}")
+            
+            # Сохраняем сообщения
+            messages_file = 'data/messages.json'
+            with open(messages_file, 'w', encoding='utf-8') as f:
+                json.dump(self.messages, f, ensure_ascii=False, indent=2)
+            logger.info(f"Сообщения сохранены в {messages_file}")
                 
         except Exception as e:
             logger.error(f"Ошибка сохранения данных: {e}")
@@ -195,6 +206,24 @@ class TelegramBot:
         else:
             await update.message.reply_text("❌ Вы не подписаны на бота. Используйте /start для подписки.")
     
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработка сообщений от пользователей"""
+        user_id = update.effective_user.id
+        text = update.message.text
+        
+        # Добавляем пользователя в подписчики если его там нет
+        if user_id not in self.subscribers:
+            self.subscribers.add(user_id)
+            self.save_data()
+        
+        # Сохраняем сообщение пользователя
+        self.add_message(user_id, text, is_from_user=True)
+        
+        # Отправляем подтверждение
+        await update.message.reply_text("✅ Сообщение получено! Администратор ответит вам в ближайшее время.")
+        
+        logger.info(f"Получено сообщение от пользователя {user_id}: {text[:50]}...")
+
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка нажатий на кнопки"""
         query = update.callback_query
@@ -257,6 +286,84 @@ class TelegramBot:
             raise
             raise
     
+    def get_user_info(self, user_id: int):
+        """Получение информации о пользователе из Telegram API"""
+        try:
+            import requests
+            url = f"https://api.telegram.org/bot{self.token}/getChat"
+            data = {'chat_id': user_id}
+            
+            response = requests.post(url, data=data)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('ok'):
+                    user_data = result['result']
+                    return {
+                        'id': user_data['id'],
+                        'username': user_data.get('username'),
+                        'first_name': user_data.get('first_name', ''),
+                        'last_name': user_data.get('last_name', ''),
+                        'full_name': f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip(),
+                        'avatar_url': None  # Telegram не предоставляет прямые ссылки на аватарки
+                    }
+            
+            return None
+        except Exception as e:
+            logger.error(f"Ошибка получения информации о пользователе {user_id}: {e}")
+            return None
+
+    def add_message(self, user_id: int, text: str, is_from_user: bool = True):
+        """Добавление сообщения в историю"""
+        if user_id not in self.messages:
+            self.messages[user_id] = []
+        
+        import datetime
+        message = {
+            'id': len(self.messages[user_id]) + 1,
+            'text': text,
+            'timestamp': datetime.datetime.now().isoformat(),
+            'is_from_user': is_from_user
+        }
+        
+        self.messages[user_id].append(message)
+        self.save_data()
+        logger.info(f"Сообщение добавлено для пользователя {user_id}: {text[:50]}...")
+    
+    def get_user_messages(self, user_id: int):
+        """Получение сообщений пользователя"""
+        return self.messages.get(str(user_id), []) if isinstance(user_id, str) else self.messages.get(user_id, [])
+    
+    def get_users_info(self):
+        """Получение информации о всех пользователях"""
+        users_info = []
+        for user_id in self.subscribers:
+            user_info = self.get_user_info(user_id)
+            if user_info:
+                users_info.append(user_info)
+            else:
+                # Если не удалось получить информацию, создаем базовую
+                users_info.append({
+                    'id': user_id,
+                    'username': f'user_{user_id}',
+                    'first_name': '',
+                    'last_name': '',
+                    'full_name': f'User {user_id}',
+                    'avatar_url': None
+                })
+            
+            # Добавляем информацию о последнем сообщении
+            user_messages = self.get_user_messages(user_id)
+            if user_messages:
+                last_message = user_messages[-1]
+                users_info[-1]['last_message_time'] = last_message['timestamp']
+                users_info[-1]['last_message_text'] = last_message['text'][:50] + ('...' if len(last_message['text']) > 50 else '')
+            else:
+                users_info[-1]['last_message_time'] = None
+                users_info[-1]['last_message_text'] = None
+        
+        return users_info
+
     def send_document_to_user(self, user_id: int, file_path: str, filename: str, caption: str = ""):
         """Отправка документа конкретному пользователю"""
         try:
@@ -330,6 +437,8 @@ class TelegramBot:
                 result = response.json()
                 if result.get('ok'):
                     logger.info(f"Сообщение успешно отправлено пользователю {user_id}")
+                    # Сохраняем сообщение администратора
+                    self.add_message(user_id, message, is_from_user=False)
                     return True
                 else:
                     logger.error(f"Telegram API ошибка: {result}")
@@ -377,6 +486,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
             application.add_handler(CommandHandler("check_pdf", self.check_pdf_command))
             application.add_handler(CommandHandler("delete_pdf", self.delete_pdf_command)) # Добавляем обработчик для удаления PDF
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота
@@ -403,6 +513,7 @@ class TelegramBot:
             application.add_handler(CommandHandler("test_pdf", self.test_pdf_command))
             application.add_handler(CommandHandler("check_pdf", self.check_pdf_command))
             application.add_handler(CommandHandler("delete_pdf", self.delete_pdf_command)) # Добавляем обработчик для удаления PDF
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
             application.add_handler(CallbackQueryHandler(self.button_callback))
             
             # Запускаем бота

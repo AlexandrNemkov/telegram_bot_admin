@@ -243,14 +243,12 @@ def dialogs():
         from bot.telegram_bot import TelegramBot
         bot = TelegramBot()
         
-        # Получаем список пользователей
-        users = []
-        for user_id in bot.subscribers:
-            users.append({
-                'id': user_id,
-                'username': f'user_{user_id}',
-                'last_message_time': None  # Пока не реализовано
-            })
+        # Получаем подробную информацию о пользователях
+        users = bot.get_users_info()
+        
+        # Добавляем время последнего сообщения (пока не реализовано)
+        for user in users:
+            user['last_message_time'] = None
         
         return render_template('dialogs.html', users=users)
     except Exception as e:
@@ -265,10 +263,19 @@ def get_messages(user_id):
         from bot.telegram_bot import TelegramBot
         bot = TelegramBot()
         
-        # Пока возвращаем пустой список (будет реализовано позже)
-        messages = []
+        messages = bot.get_user_messages(user_id)
         
-        return jsonify({'success': True, 'messages': messages})
+        # Форматируем сообщения для фронтенда
+        formatted_messages = []
+        for msg in messages:
+            formatted_messages.append({
+                'id': msg['id'],
+                'text': msg['text'],
+                'timestamp': msg['timestamp'],
+                'is_from_user': msg['is_from_user']
+            })
+        
+        return jsonify({'success': True, 'messages': formatted_messages})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

@@ -3,6 +3,48 @@
 {% block title %}Диалоги с пользователями{% endblock %}
 
 {% block content %}
+<style>
+.user-item {
+    transition: all 0.3s ease;
+    border: 1px solid #e9ecef;
+}
+
+.user-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.user-item.active {
+    background-color: #e3f2fd !important;
+    border-color: #2196f3 !important;
+}
+
+.avatar-placeholder {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: bold;
+}
+
+.messages-container {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.message-bubble {
+    max-width: 80%;
+    margin-bottom: 10px;
+}
+
+.message-bubble.admin {
+    margin-left: auto;
+}
+
+.message-bubble.user {
+    margin-right: auto;
+}
+</style>
+
 <div class="container mt-4">
     <h2>💬 Диалоги с пользователями</h2>
     
@@ -16,12 +58,36 @@
                     <div class="list-group" id="usersList">
                         {% for user in users %}
                         <a href="#" class="list-group-item list-group-item-action user-item" 
-                           data-user-id="{{ user.id }}" data-username="{{ user.username }}">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ user.username or 'user_' + user.id|string }}</h6>
-                                <small class="text-muted">{{ user.id }}</small>
+                           data-user-id="{{ user.id }}" data-username="{{ user.full_name or user.username }}">
+                            <div class="d-flex align-items-center">
+                                <!-- Аватарка пользователя -->
+                                <div class="me-3">
+                                    {% if user.avatar_url %}
+                                        <img src="{{ user.avatar_url }}" alt="Avatar" class="rounded-circle" width="40" height="40">
+                                    {% else %}
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px; font-size: 18px;">
+                                            {{ (user.full_name or user.username or 'U')[0] | upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Информация о пользователе -->
+                                <div class="flex-grow-1">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ user.full_name or user.username or 'user_' + user.id|string }}</h6>
+                                        <small class="text-muted">{{ user.id }}</small>
+                                    </div>
+                                    {% if user.username %}
+                                        <small class="text-muted">@{{ user.username }}</small><br>
+                                    {% endif %}
+                                    {% if user.last_message_text %}
+                                        <small class="text-muted">{{ user.last_message_text }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Нет сообщений</small>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <small class="text-muted">Последнее сообщение: {{ user.last_message_time or 'Нет' }}</small>
                         </a>
                         {% endfor %}
                     </div>
@@ -35,8 +101,11 @@
                     <h5 id="dialogTitle">Выберите пользователя для начала диалога</h5>
                 </div>
                 <div class="card-body">
-                    <div id="messagesContainer" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px;">
-                        <p class="text-muted text-center">Сообщения появятся здесь</p>
+                    <div id="messagesContainer" class="messages-container" style="height: 400px; overflow-y: auto; margin-bottom: 15px;">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-comments fa-3x mb-3"></i>
+                            <p>Выберите пользователя для начала диалога</p>
+                        </div>
                     </div>
                     
                     <form id="messageForm" style="display: none;">
@@ -69,6 +138,15 @@ document.querySelectorAll('.user-item').forEach(item => {
         currentUserId = userId;
         document.getElementById('dialogTitle').textContent = `💬 Диалог с ${username}`;
         document.getElementById('messageForm').style.display = 'block';
+        
+        // Очищаем контейнер сообщений
+        const container = document.getElementById('messagesContainer');
+        container.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                <p>Загружаем сообщения...</p>
+            </div>
+        `;
         
         // Загружаем сообщения
         loadMessages(userId);
@@ -131,22 +209,32 @@ function displayMessages(messages) {
     const container = document.getElementById('messagesContainer');
     container.innerHTML = '';
     
-    messages.forEach(msg => {
-        addMessageToChat(msg.sender, msg.text, new Date(msg.timestamp));
-    });
+    if (messages.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                <p>Нет сообщений</p>
+            </div>
+        `;
+    } else {
+        messages.forEach(msg => {
+            const timestamp = new Date(msg.timestamp);
+            addMessageToChat(msg.is_from_user ? 'user' : 'admin', msg.text, timestamp);
+        });
+    }
 }
 
 function addMessageToChat(sender, text, timestamp) {
     const container = document.getElementById('messagesContainer');
     const messageDiv = document.createElement('div');
-    messageDiv.className = 'mb-2';
+    messageDiv.className = `message-bubble ${sender}`;
     
     const isAdmin = sender === 'admin';
     const timeStr = timestamp.toLocaleTimeString();
     
     messageDiv.innerHTML = `
         <div class="d-flex ${isAdmin ? 'justify-content-end' : 'justify-content-start'}">
-            <div class="card ${isAdmin ? 'bg-primary text-white' : 'bg-light'}">
+            <div class="card ${isAdmin ? 'bg-primary text-white' : 'bg-light'} shadow-sm">
                 <div class="card-body py-2 px-3">
                     <div class="mb-1">${text}</div>
                     <small class="${isAdmin ? 'text-white-50' : 'text-muted'}">${timeStr}</small>
