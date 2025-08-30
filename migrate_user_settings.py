@@ -29,6 +29,8 @@ def migrate_user_settings():
             
             # Добавляем новые колонки если их нет
             new_columns = [
+                ('bot_token', 'TEXT DEFAULT ""'),
+                ('bot_username', 'TEXT DEFAULT ""'),
                 ('bot_name', 'TEXT DEFAULT "Мой бот"'),
                 ('bot_description', 'TEXT DEFAULT ""'),
                 ('start_command', 'TEXT DEFAULT "Добро пожаловать! Нажмите /help для справки."')

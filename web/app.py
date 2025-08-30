@@ -227,9 +227,18 @@ def settings():
         if request.method == 'POST':
             welcome_message = request.form.get('welcome_message')
             pdf_file = request.files.get('welcome_pdf')
+            bot_token = request.form.get('bot_token')
+            bot_username = request.form.get('bot_username')
             bot_name = request.form.get('bot_name')
             bot_description = request.form.get('bot_description')
             start_command = request.form.get('start_command')
+            
+            # Обновляем основные настройки бота (токен и username)
+            if bot_token or bot_username:
+                if db.update_user_bot_token(current_user.id, bot_token or '', bot_username or ''):
+                    flash('Основные настройки бота обновлены!', 'success')
+                else:
+                    flash('Ошибка обновления основных настроек бота!', 'error')
             
             # Обновляем настройки бота
             if bot_name or bot_description or start_command:

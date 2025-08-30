@@ -6,7 +6,79 @@
 <div class="container mt-4">
     <h2>⚙️ Настройки моего бота</h2>
     
+    <!-- Инструкция по настройке -->
+    <div class="alert alert-info mb-4">
+        <h5><i class="fas fa-info-circle me-2"></i>Как настроить своего бота:</h5>
+        <ol class="mb-0">
+            <li>Напишите <a href="https://t.me/BotFather" target="_blank">@BotFather</a> в Telegram</li>
+            <li>Отправьте команду <code>/newbot</code></li>
+            <li>Следуйте инструкциям и получите токен</li>
+            <li>Вставьте токен в поле ниже</li>
+        </ol>
+    </div>
+    
     {% if settings %}
+    <!-- Основные настройки бота -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>🔑 Основные настройки бота</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="bot_token" class="form-label">Токен бота (Bot Token):</label>
+                            <input type="password" class="form-control" id="bot_token" name="bot_token" 
+                                   value="{{ settings.bot_token or '' }}" 
+                                   placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz">
+                            <div class="form-text">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Токен безопасно хранится в зашифрованном виде
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bot_username" class="form-label">Username бота:</label>
+                            <input type="text" class="form-control" id="bot_username" name="bot_username" 
+                                   value="{{ settings.bot_username or '' }}" 
+                                   placeholder="my_awesome_bot">
+                            <div class="form-text">
+                                Без символа @ (например: my_awesome_bot)
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">💾 Сохранить основные настройки</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>📊 Статус бота</h5>
+                </div>
+                <div class="card-body">
+                    {% if settings.bot_token %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Бот настроен!</strong><br>
+                            <small>Username: @{{ settings.bot_username or 'Не указан' }}</small>
+                        </div>
+                        <a href="https://t.me/{{ settings.bot_username }}" target="_blank" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-external-link-alt me-2"></i>Открыть бота
+                        </a>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Бот не настроен</strong><br>
+                            <small>Добавьте токен бота для начала работы</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="row">
         <div class="col-md-6">
             <div class="card">
