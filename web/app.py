@@ -313,7 +313,7 @@ def send_broadcast():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/users')
-@login_required
+@admin_required
 def users():
     """Страница управления пользователями системы"""
     try:
@@ -416,7 +416,7 @@ def send_message():
 # ===== API ДЛЯ УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ =====
 
 @app.route('/api/users', methods=['POST'])
-@login_required
+@admin_required
 def create_user():
     """Создание нового пользователя"""
     try:
@@ -454,7 +454,7 @@ def create_user():
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/users/<username>/password', methods=['PUT'])
-@login_required
+@admin_required
 def update_user_password(username):
     """Обновление пароля пользователя"""
     try:
@@ -482,7 +482,7 @@ def update_user_password(username):
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/users/<username>/expiry', methods=['PUT'])
-@login_required
+@admin_required
 def update_user_expiry(username):
     """Обновление времени истечения аккаунта"""
     try:
