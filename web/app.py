@@ -261,9 +261,14 @@ def get_messages(user_id):
     """Получение сообщений для конкретного пользователя"""
     try:
         from bot.telegram_bot import TelegramBot
+        import logging
+        logger = logging.getLogger(__name__)
+        
         bot = TelegramBot()
+        logger.info(f"Запрашиваем сообщения для пользователя {user_id}")
         
         messages = bot.get_user_messages(user_id)
+        logger.info(f"Получено {len(messages)} сообщений для пользователя {user_id}")
         
         # Форматируем сообщения для фронтенда
         formatted_messages = []
@@ -275,8 +280,10 @@ def get_messages(user_id):
                 'is_from_user': msg['is_from_user']
             })
         
+        logger.info(f"Отправляем {len(formatted_messages)} отформатированных сообщений")
         return jsonify({'success': True, 'messages': formatted_messages})
     except Exception as e:
+        logger.error(f"Ошибка получения сообщений для пользователя {user_id}: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/send_message', methods=['POST'])

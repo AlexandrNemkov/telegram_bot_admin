@@ -217,12 +217,10 @@ class TelegramBot:
             self.save_data()
         
         # Сохраняем сообщение пользователя
+        logger.info(f"Сохраняем сообщение от пользователя {user_id}: {text[:50]}...")
         self.add_message(user_id, text, is_from_user=True)
         
-        # Отправляем подтверждение
-        await update.message.reply_text("✅ Сообщение получено! Администратор ответит вам в ближайшее время.")
-        
-        logger.info(f"Получено сообщение от пользователя {user_id}: {text[:50]}...")
+        logger.info(f"Сообщение от пользователя {user_id} сохранено. Всего сообщений: {len(self.messages.get(str(user_id), []))}")
 
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка нажатий на кнопки"""
@@ -315,24 +313,29 @@ class TelegramBot:
 
     def add_message(self, user_id: int, text: str, is_from_user: bool = True):
         """Добавление сообщения в историю"""
-        if user_id not in self.messages:
-            self.messages[user_id] = []
+        # Приводим user_id к строке для консистентности
+        user_key = str(user_id)
+        
+        if user_key not in self.messages:
+            self.messages[user_key] = []
         
         import datetime
         message = {
-            'id': len(self.messages[user_id]) + 1,
+            'id': len(self.messages[user_key]) + 1,
             'text': text,
             'timestamp': datetime.datetime.now().isoformat(),
             'is_from_user': is_from_user
         }
         
-        self.messages[user_id].append(message)
+        self.messages[user_key].append(message)
         self.save_data()
         logger.info(f"Сообщение добавлено для пользователя {user_id}: {text[:50]}...")
     
     def get_user_messages(self, user_id: int):
         """Получение сообщений пользователя"""
-        return self.messages.get(str(user_id), []) if isinstance(user_id, str) else self.messages.get(user_id, [])
+        # Всегда используем строковый ключ
+        user_key = str(user_id)
+        return self.messages.get(user_key, [])
     
     def get_users_info(self):
         """Получение информации о всех пользователях"""
