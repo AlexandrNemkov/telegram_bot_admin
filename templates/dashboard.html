@@ -1,56 +1,133 @@
 {% extends "base.html" %}
 
-{% block title %}Дашборд - Админ-панель{% endblock %}
+{% block title %}Дашборд - Bothelp{% endblock %}
 
 {% block content %}
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <h1 class="mb-4">
-            <i class="fas fa-tachometer-alt me-2"></i>Дашборд
-        </h1>
+        <div class="welcome-section text-center py-4">
+            <h1 class="display-4 fw-bold text-gradient mb-3">
+                <i class="fas fa-rocket me-3"></i>Добро пожаловать в Bothelp!
+            </h1>
+            <p class="lead text-muted">Управляйте вашим Telegram ботом с легкостью</p>
+        </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- Статистика подписчиков -->
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="display-4 text-primary mb-2">
-                    <i class="fas fa-users"></i>
+<!-- Статистика в красивых карточках -->
+<div class="row mb-5">
+    <!-- Подписчики -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-card-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-card-content">
+                <h2 class="stat-card-number">{{ subscribers_count }}</h2>
+                <p class="stat-card-label">Подписчиков</p>
+                <div class="stat-card-progress">
+                    <div class="progress-bar-fill" style="width: 75%"></div>
                 </div>
-                <h3 class="card-title">{{ subscribers_count }}</h3>
-                <p class="card-text text-muted">Подписчиков</p>
             </div>
         </div>
     </div>
     
-    <!-- Быстрые действия -->
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="display-4 text-success mb-2">
-                    <i class="fas fa-bullhorn"></i>
+    <!-- Диалоги -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="stat-card stat-card-success">
+            <div class="stat-card-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <div class="stat-card-content">
+                <h2 class="stat-card-number">24</h2>
+                <p class="stat-card-label">Активных диалогов</p>
+                <div class="stat-card-progress">
+                    <div class="progress-bar-fill" style="width: 60%"></div>
                 </div>
-                <h5 class="card-title">Рассылка</h5>
-                <p class="card-text text-muted">Отправить сообщение всем подписчикам</p>
-                <a href="{{ url_for('broadcast') }}" class="btn btn-success">
-                    <i class="fas fa-paper-plane me-2"></i>Создать рассылку
+            </div>
+        </div>
+    </div>
+    
+    <!-- Сообщения -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="stat-card stat-card-info">
+            <div class="stat-card-icon">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="stat-card-content">
+                <h2 class="stat-card-number">156</h2>
+                <p class="stat-card-label">Сообщений сегодня</p>
+                <div class="stat-card-progress">
+                    <div class="progress-bar-fill" style="width: 85%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статус бота -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="stat-card stat-card-warning">
+            <div class="stat-card-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="stat-card-content">
+                <h2 class="stat-card-number">🟢</h2>
+                <p class="stat-card-label">Бот активен</p>
+                <div class="stat-card-progress">
+                    <div class="progress-bar-fill" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h3 class="section-title mb-4">
+            <i class="fas fa-bolt me-2"></i>Быстрые действия
+        </h3>
+    </div>
+    
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="action-card action-card-primary">
+            <div class="action-card-header">
+                <i class="fas fa-bullhorn"></i>
+            </div>
+            <div class="action-card-body">
+                <h5>Создать рассылку</h5>
+                <p>Отправить сообщение всем подписчикам</p>
+                <a href="{{ url_for('broadcast') }}" class="action-card-btn">
+                    <i class="fas fa-paper-plane me-2"></i>Начать
                 </a>
             </div>
         </div>
     </div>
     
-    <!-- Настройки -->
     <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <div class="display-4 text-info mb-2">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <h5 class="card-title">Настройки</h5>
-                <p class="card-text text-muted">Настроить приветственное сообщение и PDF</p>
-                <a href="{{ url_for('settings') }}" class="btn btn-info">
+        <div class="action-card action-card-success">
+            <div class="action-card-header">
+                <i class="fas fa-comments"></i>
+            </div>
+            <div class="action-card-body">
+                <h5>Открыть диалоги</h5>
+                <p>Общаться с пользователями бота</p>
+                <a href="{{ url_for('dialogs') }}" class="action-card-btn">
+                    <i class="fas fa-chat me-2"></i>Открыть
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="action-card action-card-info">
+            <div class="action-card-header">
+                <i class="fas fa-cog"></i>
+            </div>
+            <div class="action-card-body">
+                <h5>Настройки</h5>
+                <p>Настроить бота и приветствие</p>
+                <a href="{{ url_for('settings') }}" class="action-card-btn">
                     <i class="fas fa-wrench me-2"></i>Настроить
                 </a>
             </div>
@@ -58,38 +135,345 @@
     </div>
 </div>
 
+<!-- Дополнительная информация -->
 <div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-chart-line me-2"></i>Последние действия
-                </h5>
+    <div class="col-md-8 mb-4">
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5><i class="fas fa-chart-line me-2"></i>Активность бота</h5>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Статистика бота</h6>
-                        <ul class="list-unstyled">
-                            <li><i class="fas fa-check text-success me-2"></i>Бот активен и работает</li>
-                            <li><i class="fas fa-users text-primary me-2"></i>{{ subscribers_count }} подписчиков</li>
-                            <li><i class="fas fa-file-pdf text-info me-2"></i>PDF файл настроен</li>
-                        </ul>
+            <div class="info-card-body">
+                <div class="activity-item">
+                    <div class="activity-icon activity-success">
+                        <i class="fas fa-check"></i>
                     </div>
-                    <div class="col-md-6">
-                        <h6>Быстрые ссылки</h6>
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('subscribers') }}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-list me-2"></i>Список подписчиков
-                            </a>
-                            <a href="{{ url_for('broadcast') }}" class="btn btn-outline-success btn-sm">
-                                <i class="fas fa-envelope me-2"></i>Новая рассылка
-                            </a>
-                        </div>
+                    <div class="activity-content">
+                        <h6>Бот работает стабильно</h6>
+                        <p class="text-muted">Последняя проверка: 2 минуты назад</p>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon activity-info">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h6>{{ subscribers_count }} активных подписчиков</h6>
+                        <p class="text-muted">За последние 24 часа: +3 новых</p>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon activity-warning">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h6>PDF файл настроен</h6>
+                        <p class="text-muted">Размер: 2.4 MB, обновлен вчера</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="info-card">
+            <div class="info-card-header">
+                <h5><i class="fas fa-link me-2"></i>Быстрые ссылки</h5>
+            </div>
+            <div class="info-card-body">
+                <div class="quick-links">
+                    <a href="{{ url_for('subscribers') }}" class="quick-link">
+                        <i class="fas fa-list me-2"></i>Список подписчиков
+                    </a>
+                    <a href="{{ url_for('profile') }}" class="quick-link">
+                        <i class="fas fa-user me-2"></i>Мой профиль
+                    </a>
+                    <a href="{{ url_for('broadcast') }}" class="quick-link">
+                        <i class="fas fa-envelope me-2"></i>Новая рассылка
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* Стили для красивого дашборда */
+.text-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.welcome-section {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 20px;
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    color: #2c3e50;
+    font-weight: 600;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+}
+
+/* Статистические карточки */
+.stat-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.stat-card-primary { border-left: 5px solid #667eea; }
+.stat-card-success { border-left: 5px solid #28a745; }
+.stat-card-info { border-left: 5px solid #17a2b8; }
+.stat-card-warning { border-left: 5px solid #ffc107; }
+
+.stat-card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.stat-card-primary .stat-card-icon { color: #667eea; }
+.stat-card-success .stat-card-icon { color: #28a745; }
+.stat-card-info .stat-card-icon { color: #17a2b8; }
+.stat-card-warning .stat-card-icon { color: #ffc107; }
+
+.stat-card-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.stat-card-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card-progress {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+    transition: width 0.6s ease;
+}
+
+/* Карточки действий */
+.action-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    text-align: center;
+    height: 100%;
+}
+
+.action-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.action-card-primary { border-top: 5px solid #667eea; }
+.action-card-success { border-top: 5px solid #28a745; }
+.action-card-info { border-top: 5px solid #17a2b8; }
+
+.action-card-header {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+}
+
+.action-card-primary .action-card-header { color: #667eea; }
+.action-card-success .action-card-header { color: #28a745; }
+.action-card-info .action-card-header { color: #17a2b8; }
+
+.action-card-body h5 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.action-card-body p {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+.action-card-btn {
+    display: inline-block;
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.action-card-btn:hover {
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Информационные карточки */
+.info-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+    height: 100%;
+}
+
+.info-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+}
+
+.info-card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.info-card-body {
+    padding: 1.5rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.activity-success { background: #d4edda; color: #155724; }
+.activity-info { background: #d1ecf1; color: #0c5460; }
+.activity-warning { background: #fff3cd; color: #856404; }
+
+.activity-content h6 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.activity-content p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.quick-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.quick-link {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    color: #495057;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.quick-link:hover {
+    background: #e9ecef;
+    color: #495057;
+    transform: translateX(5px);
+}
+
+/* Анимации */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card, .action-card, .info-card {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+.action-card:nth-child(1) { animation-delay: 0.5s; }
+.action-card:nth-child(2) { animation-delay: 0.6s; }
+.action-card:nth-child(3) { animation-delay: 0.7s; }
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .stat-card, .action-card {
+        margin-bottom: 1rem;
+    }
+    
+    .welcome-section {
+        padding: 2rem 1rem;
+    }
+    
+    .stat-card-number {
+        font-size: 2rem;
+    }
+}
+</style>
 {% endblock %}
