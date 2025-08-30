@@ -227,6 +227,16 @@ def settings():
         if request.method == 'POST':
             welcome_message = request.form.get('welcome_message')
             pdf_file = request.files.get('welcome_pdf')
+            bot_name = request.form.get('bot_name')
+            bot_description = request.form.get('bot_description')
+            start_command = request.form.get('start_command')
+            
+            # Обновляем настройки бота
+            if bot_name or bot_description or start_command:
+                if db.update_user_bot_settings(current_user.id, bot_name or '', bot_description or '', start_command or ''):
+                    flash('Настройки бота обновлены!', 'success')
+                else:
+                    flash('Ошибка обновления настроек бота!', 'error')
             
             if welcome_message:
                 if db.update_user_welcome_message(current_user.id, welcome_message):

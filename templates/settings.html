@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>⚙️ Настройки</h2>
+    <h2>⚙️ Настройки моего бота</h2>
     
     {% if settings %}
     <div class="row">
@@ -59,7 +59,32 @@
     </div>
     
     <div class="row mt-4">
-        <div class="col-12">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>🤖 Настройки бота</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="bot_name" class="form-label">Название бота:</label>
+                            <input type="text" class="form-control" id="bot_name" name="bot_name" value="{{ settings.bot_name or 'Мой бот' }}" placeholder="Введите название бота">
+                        </div>
+                        <div class="mb-3">
+                            <label for="bot_description" class="form-label">Описание бота:</label>
+                            <textarea class="form-control" id="bot_description" name="bot_description" rows="2" placeholder="Краткое описание функционала">{{ settings.bot_description or '' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="start_command" class="form-label">Команда /start:</label>
+                            <textarea class="form-control" id="start_command" name="start_command" rows="2" placeholder="Сообщение при команде /start">{{ settings.start_command or 'Добро пожаловать! Нажмите /help для справки.' }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">💾 Сохранить настройки бота</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h5>ℹ️ Информация о настройках</h5>
@@ -68,6 +93,8 @@
                     <p><strong>Создано:</strong> {{ settings.created_at }}</p>
                     <p><strong>Обновлено:</strong> {{ settings.updated_at }}</p>
                     <p><strong>Статус:</strong> <span class="badge bg-success">Активно</span></p>
+                    <hr>
+                    <p><strong>Важно:</strong> Эти настройки применяются только к вашему боту и не влияют на других пользователей системы.</p>
                 </div>
             </div>
         </div>

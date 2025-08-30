@@ -81,6 +81,9 @@ class Database:
                         user_id INTEGER NOT NULL,
                         welcome_message TEXT DEFAULT 'Добро пожаловать! 👋',
                         welcome_pdf_path TEXT DEFAULT '',
+                        bot_name TEXT DEFAULT 'Мой бот',
+                        bot_description TEXT DEFAULT '',
+                        start_command TEXT DEFAULT 'Добро пожаловать! Нажмите /help для справки.',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES system_users (id)
@@ -535,7 +538,7 @@ class Database:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT welcome_message, welcome_pdf_path, created_at, updated_at
+                SELECT welcome_message, welcome_pdf_path, bot_name, bot_description, start_command, created_at, updated_at
                 FROM user_settings 
                 WHERE user_id = ?
             ''', (user_id,))
@@ -545,20 +548,26 @@ class Database:
                 return {
                     'welcome_message': result[0],
                     'welcome_pdf_path': result[1],
-                    'created_at': result[2],
-                    'updated_at': result[3]
+                    'bot_name': result[2],
+                    'bot_description': result[3],
+                    'start_command': result[4],
+                    'created_at': result[5],
+                    'updated_at': result[6]
                 }
             else:
                 # Создать настройки по умолчанию для пользователя
                 cursor.execute('''
-                    INSERT INTO user_settings (user_id, welcome_message, welcome_pdf_path)
-                    VALUES (?, ?, ?)
-                ''', (user_id, 'Добро пожаловать! 👋', ''))
+                    INSERT INTO user_settings (user_id, welcome_message, welcome_pdf_path, bot_name, bot_description, start_command)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (user_id, 'Добро пожаловать! 👋', '', 'Мой бот', '', 'Добро пожаловать! Нажмите /help для справки.'))
                 conn.commit()
                 
                 return {
                     'welcome_message': 'Добро пожаловать! 👋',
                     'welcome_pdf_path': '',
+                    'bot_name': 'Мой бот',
+                    'bot_description': '',
+                    'start_command': 'Добро пожаловать! Нажмите /help для справки.',
                     'created_at': datetime.now().isoformat(),
                     'updated_at': datetime.now().isoformat()
                 }
@@ -584,5 +593,17 @@ class Database:
                 SET welcome_pdf_path = ?, updated_at = ?
                 WHERE user_id = ?
             ''', (pdf_path, datetime.now().isoformat(), user_id))
+            conn.commit()
+            return True
+
+    def update_user_bot_settings(self, user_id, bot_name, bot_description, start_command):
+        """Обновить настройки бота пользователя"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE user_settings 
+                SET bot_name = ?, bot_description = ?, start_command = ?, updated_at = ?
+                WHERE user_id = ?
+            ''', (bot_name, bot_description, start_command, datetime.now().isoformat(), user_id))
             conn.commit()
             return True
