@@ -53,10 +53,31 @@ class Database:
                     )
                 ''')
                 
+                # Таблица пользователей системы (admin/user)
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS system_users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'user',
+                        full_name TEXT,
+                        email TEXT,
+                        account_expires TIMESTAMP,
+                        is_active BOOLEAN DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_login TIMESTAMP,
+                        created_by INTEGER,
+                        FOREIGN KEY (created_by) REFERENCES system_users (id)
+                    )
+                ''')
+                
                 # Создаем индексы для быстрого поиска
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_system_users_username ON system_users(username)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_system_users_role ON system_users(role)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_system_users_expires ON system_users(account_expires)')
                 
                 conn.commit()
                 logger.info("База данных инициализирована успешно")
@@ -289,3 +310,199 @@ class Database:
         except Exception as e:
             logger.error(f"Ошибка очистки старых сообщений: {e}")
             return 0
+
+    # ===== МЕТОДЫ ДЛЯ СИСТЕМНЫХ ПОЛЬЗОВАТЕЛЕЙ =====
+    
+    def create_system_user(self, username: str, password_hash: str, role: str = 'user', 
+                          full_name: str = None, email: str = None, 
+                          account_expires: str = None, created_by: int = None) -> bool:
+        """Создание системного пользователя"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    INSERT INTO system_users (username, password_hash, role, full_name, email, 
+                                            account_expires, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (username, password_hash, role, full_name, email, account_expires, created_by))
+                
+                conn.commit()
+                logger.info(f"Создан системный пользователь: {username} с ролью {role}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Ошибка создания системного пользователя {username}: {e}")
+            return False
+    
+    def get_system_user(self, username: str) -> Optional[Dict]:
+        """Получение системного пользователя по username"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT id, username, password_hash, role, full_name, email, 
+                           account_expires, is_active, created_at, last_login, created_by
+                    FROM system_users WHERE username = ?
+                ''', (username,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'username': row[1],
+                        'password_hash': row[2],
+                        'role': row[3],
+                        'full_name': row[4],
+                        'email': row[5],
+                        'account_expires': row[6],
+                        'is_active': bool(row[7]),
+                        'created_at': row[8],
+                        'last_login': row[9],
+                        'created_by': row[10]
+                    }
+                return None
+                
+        except Exception as e:
+            logger.error(f"Ошибка получения системного пользователя {username}: {e}")
+            return None
+    
+    def update_system_user_password(self, username: str, new_password_hash: str) -> bool:
+        """Обновление пароля системного пользователя"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    UPDATE system_users SET password_hash = ? WHERE username = ?
+                ''', (new_password_hash, username))
+                
+                conn.commit()
+                logger.info(f"Пароль обновлен для пользователя {username}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Ошибка обновления пароля для {username}: {e}")
+            return False
+    
+    def update_system_user_expiry(self, username: str, account_expires: str) -> bool:
+        """Обновление времени истечения аккаунта"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    UPDATE system_users SET account_expires = ? WHERE username = ?
+                ''', (account_expires, username))
+                
+                conn.commit()
+                logger.info(f"Время истечения обновлено для пользователя {username}: {account_expires}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Ошибка обновления времени истечения для {username}: {e}")
+            return False
+    
+    def get_expired_accounts(self) -> List[Dict]:
+        """Получение списка истекших аккаунтов"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT id, username, full_name, email, account_expires, created_at
+                    FROM system_users 
+                    WHERE account_expires < datetime('now') AND is_active = 1
+                    ORDER BY account_expires ASC
+                ''')
+                
+                expired_accounts = []
+                for row in cursor.fetchall():
+                    expired_accounts.append({
+                        'id': row[0],
+                        'username': row[1],
+                        'full_name': row[2],
+                        'email': row[3],
+                        'account_expires': row[4],
+                        'created_at': row[5]
+                    })
+                
+                return expired_accounts
+                
+        except Exception as e:
+            logger.error(f"Ошибка получения истекших аккаунтов: {e}")
+            return []
+    
+    def deactivate_expired_accounts(self) -> int:
+        """Деактивация истекших аккаунтов"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    UPDATE system_users 
+                    SET is_active = 0 
+                    WHERE account_expires < datetime('now') AND is_active = 1
+                ''')
+                
+                deactivated_count = cursor.rowcount
+                conn.commit()
+                
+                logger.info(f"Деактивировано {deactivated_count} истекших аккаунтов")
+                return deactivated_count
+                
+        except Exception as e:
+            logger.error(f"Ошибка деактивации истекших аккаунтов: {e}")
+            return 0
+    
+    def get_all_system_users(self) -> List[Dict]:
+        """Получение всех системных пользователей"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT id, username, role, full_name, email, account_expires, 
+                           is_active, created_at, last_login, created_by
+                    FROM system_users 
+                    ORDER BY created_at DESC
+                ''')
+                
+                users = []
+                for row in cursor.fetchall():
+                    users.append({
+                        'id': row[0],
+                        'username': row[1],
+                        'role': row[2],
+                        'full_name': row[3],
+                        'email': row[4],
+                        'account_expires': row[5],
+                        'is_active': bool(row[6]),
+                        'created_at': row[7],
+                        'last_login': row[8],
+                        'created_by': row[9]
+                    })
+                
+                return users
+                
+        except Exception as e:
+            logger.error(f"Ошибка получения системных пользователей: {e}")
+            return []
+    
+    def update_last_login(self, username: str) -> bool:
+        """Обновление времени последнего входа"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    UPDATE system_users SET last_login = CURRENT_TIMESTAMP WHERE username = ?
+                ''', (username,))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Ошибка обновления времени входа для {username}: {e}")
+            return False

@@ -201,8 +201,17 @@ def settings():
 @app.route('/subscribers')
 @login_required
 def subscribers():
-    subscribers_list = bot.get_subscribers_list()
-    return render_template('subscribers.html', subscribers=subscribers_list)
+    try:
+        from bot.telegram_bot import TelegramBot
+        bot = TelegramBot()
+        
+        # Получаем подробную информацию о пользователях
+        users = bot.get_users_info()
+        
+        return render_template('subscribers.html', subscribers=users)
+    except Exception as e:
+        flash(f'Ошибка загрузки подписчиков: {e}', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/api/send_broadcast', methods=['POST'])
 @login_required

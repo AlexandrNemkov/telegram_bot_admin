@@ -35,7 +35,10 @@
                                 <tr>
                                     <th>#</th>
                                     <th>ID пользователя</th>
-                                    <th>Дата подписки</th>
+                                    <th>Имя</th>
+                                    <th>Username</th>
+                                    <th>Дата регистрации</th>
+                                    <th>Последняя активность</th>
                                     <th>Статус</th>
                                     <th>Действия</th>
                                 </tr>
@@ -45,17 +48,44 @@
                                 <tr>
                                     <td>{{ loop.index }}</td>
                                     <td>
-                                        <code>{{ subscriber }}</code>
+                                        <code>{{ subscriber.id }}</code>
                                     </td>
                                     <td>
-                                        <span class="text-muted">Сегодня</span>
+                                        {% if subscriber.full_name %}
+                                            <strong>{{ subscriber.full_name }}</strong>
+                                        {% elif subscriber.first_name %}
+                                            {{ subscriber.first_name }}
+                                        {% else %}
+                                            <span class="text-muted">Не указано</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if subscriber.username %}
+                                            <span class="text-primary">@{{ subscriber.username }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Нет</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if subscriber.created_at %}
+                                            <small class="text-muted">{{ subscriber.created_at[:10] }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Неизвестно</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if subscriber.last_activity %}
+                                            <small class="text-muted">{{ subscriber.last_activity[:10] }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Неизвестно</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <span class="badge bg-success">Активен</span>
                                     </td>
                                     <td>
                                         <button class="btn btn-outline-primary btn-sm" 
-                                                onclick="sendPersonalMessage({{ subscriber }})">
+                                                onclick="sendPersonalMessage({{ subscriber.id }})">
                                             <i class="fas fa-paper-plane me-1"></i>Сообщение
                                         </button>
                                     </td>
@@ -139,9 +169,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Экспорт списка
     exportBtn.addEventListener('click', function() {
         const subscribers = {{ subscribers|tojson }};
+        
+        // Заголовки CSV
+        const headers = [
+            'ID пользователя',
+            'Имя',
+            'Username', 
+            'Дата регистрации',
+            'Последняя активность',
+            'Статус'
+        ];
+        
+        // Данные для CSV
+        const csvData = subscribers.map(sub => [
+            sub.id,
+            sub.full_name || sub.first_name || 'Не указано',
+            sub.username ? `@${sub.username}` : 'Нет',
+            sub.created_at ? sub.created_at.slice(0, 10) : 'Неизвестно',
+            sub.last_activity ? sub.last_activity.slice(0, 10) : 'Неизвестно',
+            'Активен'
+        ]);
+        
+        // Формируем CSV
         const csvContent = "data:text/csv;charset=utf-8," 
-            + "ID пользователя,Дата подписки,Статус\n"
-            + subscribers.map(sub => `${sub},Сегодня,Активен`).join("\n");
+            + headers.join(',') + "\n"
+            + csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join("\n");
         
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");

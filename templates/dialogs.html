@@ -150,6 +150,16 @@ document.querySelectorAll('.user-item').forEach(item => {
         
         // Загружаем сообщения
         loadMessages(userId);
+        
+        // Запускаем автообновление сообщений каждые 5 секунд
+        if (window.messageUpdateInterval) {
+            clearInterval(window.messageUpdateInterval);
+        }
+        window.messageUpdateInterval = setInterval(() => {
+            if (currentUserId) {
+                loadMessages(currentUserId);
+            }
+        }, 5000);
     });
 });
 
@@ -246,5 +256,8 @@ function addMessageToChat(sender, text, timestamp) {
     container.appendChild(messageDiv);
     container.scrollTop = container.scrollHeight;
 }
+
+// Автообновление списка пользователей каждые 10 секунд
+setInterval(loadUsers, 10000);
 </script>
 {% endblock %}
