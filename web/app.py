@@ -289,6 +289,22 @@ def send_broadcast():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/users')
+@login_required
+def users():
+    """Страница управления пользователями системы"""
+    try:
+        from database import Database
+        db = Database()
+        
+        # Получаем всех пользователей системы
+        system_users = db.get_all_system_users()
+        
+        return render_template('users.html', users=system_users)
+    except Exception as e:
+        flash(f'Ошибка загрузки пользователей: {e}', 'error')
+        return redirect(url_for('dashboard'))
+
 @app.route('/dialogs')
 @login_required
 def dialogs():
@@ -371,6 +387,95 @@ def send_message():
             return jsonify({'success': True})
         else:
             return jsonify({'success': False, 'error': 'Ошибка отправки'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# ===== API ДЛЯ УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ =====
+
+@app.route('/api/users', methods=['POST'])
+@login_required
+def create_user():
+    """Создание нового пользователя"""
+    try:
+        from database import Database
+        import hashlib
+        
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        role = data.get('role', 'user')
+        full_name = data.get('full_name')
+        email = data.get('email')
+        account_expires = data.get('account_expires')
+        
+        if not username or not password:
+            return jsonify({'success': False, 'error': 'Username и пароль обязательны'})
+        
+        db = Database()
+        
+        # Проверяем что пользователь не существует
+        existing_user = db.get_system_user(username)
+        if existing_user:
+            return jsonify({'success': False, 'error': 'Пользователь с таким username уже существует'})
+        
+        # Хешируем пароль
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        
+        # Создаем пользователя
+        if db.create_system_user(username, password_hash, role, full_name, email, account_expires, current_user.id):
+            return jsonify({'success': True, 'message': 'Пользователь создан успешно'})
+        else:
+            return jsonify({'success': False, 'error': 'Ошибка создания пользователя'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/users/<username>/password', methods=['PUT'])
+@login_required
+def update_user_password(username):
+    """Обновление пароля пользователя"""
+    try:
+        from database import Database
+        import hashlib
+        
+        data = request.get_json()
+        new_password = data.get('new_password')
+        
+        if not new_password:
+            return jsonify({'success': False, 'error': 'Новый пароль обязателен'})
+        
+        db = Database()
+        
+        # Хешируем новый пароль
+        password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+        
+        # Обновляем пароль
+        if db.update_system_user_password(username, password_hash):
+            return jsonify({'success': True, 'message': 'Пароль обновлен успешно'})
+        else:
+            return jsonify({'success': False, 'error': 'Ошибка обновления пароля'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/users/<username>/expiry', methods=['PUT'])
+@login_required
+def update_user_expiry(username):
+    """Обновление времени истечения аккаунта"""
+    try:
+        from database import Database
+        
+        data = request.get_json()
+        account_expires = data.get('account_expires')
+        
+        db = Database()
+        
+        # Обновляем время истечения
+        if db.update_system_user_expiry(username, account_expires):
+            return jsonify({'success': True, 'message': 'Время истечения обновлено успешно'})
+        else:
+            return jsonify({'success': False, 'error': 'Ошибка обновления времени истечения'})
+            
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

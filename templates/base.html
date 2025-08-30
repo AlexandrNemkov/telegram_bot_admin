@@ -81,6 +81,9 @@
                         <a class="nav-link {% if request.endpoint == 'dialogs' %}active{% endif %}" href="{{ url_for('dialogs') }}">
                             <i class="fas fa-comments me-2"></i> 💬 Диалоги
                         </a>
+                        <a class="nav-link {% if request.endpoint == 'users' %}active{% endif %}" href="{{ url_for('users') }}">
+                            <i class="fas fa-users-cog me-2"></i> 👥 Пользователи
+                        </a>
                         <hr class="text-white-50">
                         <a class="nav-link" href="{{ url_for('logout') }}">
                             <i class="fas fa-sign-out-alt me-2"></i> Выход
