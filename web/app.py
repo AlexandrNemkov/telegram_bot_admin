@@ -114,9 +114,13 @@ def rate_limit(max_attempts=5, window=300):
 bot = TelegramBot()
 
 class User(UserMixin):
-    def __init__(self, id, username):
+    def __init__(self, id, username, role='user'):
         self.id = id
         self.username = username
+        self.role = role
+    
+    def get_role(self):
+        return self.role
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -127,7 +131,7 @@ def load_user(user_id):
         user = db.get_system_user(user_id)
         
         if user and user['is_active']:
-            return User(user['id'], user['username'])
+            return User(user['id'], user['username'], user['role'])
         
         return None
         
@@ -135,7 +139,7 @@ def load_user(user_id):
         print(f"Ошибка загрузки пользователя: {e}")
         # Fallback на старую систему
         if user_id == Config.ADMIN_USERNAME:
-            return User(user_id, Config.ADMIN_USERNAME)
+            return User(user_id, Config.ADMIN_USERNAME, 'admin')
         return None
 
 @app.route('/')
@@ -153,7 +157,7 @@ def login():
         
         user_data = check_auth(username, password)
         if user_data:
-            user = User(user_data['id'], user_data['username'])
+            user = User(user_data['id'], user_data['username'], user_data['role'])
             login_user(user)
             return redirect(url_for('dashboard'))
         else:
