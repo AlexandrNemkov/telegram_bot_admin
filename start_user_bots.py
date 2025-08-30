@@ -84,7 +84,7 @@ def main():
             print("\n🔄 Система работает. Нажмите Ctrl+C для остановки...")
             try:
                 while True:
-                    await asyncio.sleep(10)
+                    time.sleep(10)
             except KeyboardInterrupt:
                 print("\n🛑 Остановка всех ботов...")
                 bot_manager.stop_all_bots()

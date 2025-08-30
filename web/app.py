@@ -13,7 +13,6 @@ import time
 
 # Добавляем путь к модулю бота
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'bot'))
-from telegram_bot import TelegramBot
 
 # Получаем путь к корневой папке проекта (где находится папка templates)
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -110,8 +109,11 @@ def rate_limit(max_attempts=5, window=300):
         return decorated_function
     return decorator
 
-# Инициализация бота
-bot = TelegramBot()
+# Инициализация менеджера ботов
+try:
+    from bot.user_bot_manager import bot_manager
+except ImportError:
+    bot_manager = None
 
 class User(UserMixin):
     def __init__(self, id, username, role='user'):
@@ -444,20 +446,16 @@ def dialogs():
 def get_messages(user_id):
     """Получение сообщений для конкретного пользователя"""
     try:
-        from bot.telegram_bot import TelegramBot
+        from database import Database
         import logging
         logger = logging.getLogger(__name__)
         
-        bot = TelegramBot()
         logger.info(f"Запрашиваем сообщения для пользователя {user_id}")
         
-        # Проверяем доступ к базе данных
-        try:
-            messages = bot.get_user_messages(user_id)
-            logger.info(f"Получено {len(messages)} сообщений для пользователя {user_id}")
-        except Exception as db_error:
-            logger.error(f"Ошибка доступа к базе данных: {db_error}")
-            return jsonify({'success': False, 'error': f'Ошибка БД: {str(db_error)}'})
+        # Получаем сообщения только для бота текущего пользователя
+        db = Database()
+        messages = db.get_messages_between_users(user_id, current_user.id)
+        logger.info(f"Получено {len(messages)} сообщений для пользователя {user_id}")
         
         # Форматируем сообщения для фронтенда
         formatted_messages = []
