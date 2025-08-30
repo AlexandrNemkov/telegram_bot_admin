@@ -145,8 +145,19 @@ def load_user(user_id):
 @app.route('/')
 @login_required
 def dashboard():
-    subscribers_count = bot.get_subscribers_count()
-    return render_template('dashboard.html', subscribers_count=subscribers_count)
+    try:
+        from bot.user_bot_manager import bot_manager
+        user_bot = bot_manager.get_bot(current_user.id)
+        
+        if user_bot:
+            subscribers_count = user_bot.get_subscribers_count()
+        else:
+            subscribers_count = 0
+            
+        return render_template('dashboard.html', subscribers_count=subscribers_count)
+    except Exception as e:
+        print(f"Ошибка загрузки дашборда: {e}")
+        return render_template('dashboard.html', subscribers_count=0)
 
 @app.route('/login', methods=['GET', 'POST'])
 @rate_limit(max_attempts=5, window=300)
@@ -309,11 +320,17 @@ def settings():
 @login_required
 def subscribers():
     try:
-        from bot.telegram_bot import TelegramBot
-        bot = TelegramBot()
+        from bot.user_bot_manager import bot_manager
+        user_bot = bot_manager.get_bot(current_user.id)
         
-        # Получаем подробную информацию о пользователях
-        users = bot.get_users_info()
+        if not user_bot:
+            flash('Ваш бот не настроен или не запущен', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Получаем подписчиков конкретного бота пользователя
+        from database import Database
+        db = Database()
+        users = db.get_all_users()
         
         return render_template('subscribers.html', subscribers=users)
     except Exception as e:
@@ -322,7 +339,7 @@ def subscribers():
 
 @app.route('/api/send_broadcast', methods=['POST'])
 @login_required
-def send_broadcast():
+async def send_broadcast():
     data = request.get_json()
     message = data.get('message')
     
@@ -334,13 +351,15 @@ def send_broadcast():
         success_count = 0
         failed_count = 0
         
-        for user_id in bot.subscribers:
-            try:
-                bot.send_message_to_user(user_id, message)
-                success_count += 1
-            except Exception as e:
-                print(f"Ошибка отправки пользователю {user_id}: {e}")
-                failed_count += 1
+        # Отправляем сообщение через бота текущего пользователя
+        from bot.user_bot_manager import bot_manager
+        user_bot = bot_manager.get_bot(current_user.id)
+        
+        if not user_bot:
+            return jsonify({'error': 'Ваш бот не настроен или не запущен'}), 500
+        
+        # Отправляем рассылку через бота пользователя
+        success_count, failed_count = await user_bot.send_broadcast(message)
         
         return jsonify({
             'success': True,
@@ -556,6 +575,21 @@ def profile():
     except Exception as e:
         flash(f'Ошибка загрузки профиля: {e}', 'error')
         return redirect(url_for('dashboard'))
+
+@app.route('/api/bot/reload', methods=['POST'])
+@login_required
+def reload_bot():
+    """Перезагрузка бота пользователя"""
+    try:
+        from bot.user_bot_manager import bot_manager
+        
+        if bot_manager.reload_bot(current_user.id):
+            return jsonify({'success': True, 'message': 'Бот успешно перезагружен'})
+        else:
+            return jsonify({'success': False, 'error': 'Не удалось перезагрузить бота'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/profile/change-password', methods=['POST'])
 @login_required
