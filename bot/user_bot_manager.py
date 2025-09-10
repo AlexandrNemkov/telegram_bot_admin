@@ -7,7 +7,7 @@
 import asyncio
 import logging
 import threading
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -145,7 +145,7 @@ class UserBot:
         """Получение количества подписчиков"""
         return len(self.subscribers)
     
-    async def send_broadcast(self, message: str) -> tuple[int, int]:
+    async def send_broadcast(self, message: str) -> Tuple[int, int]:
         """Отправка рассылки всем подписчикам"""
         success_count = 0
         failed_count = 0

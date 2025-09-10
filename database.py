@@ -722,37 +722,6 @@ class Database:
                 }
             return None
 
-    def add_message(self, user_id, text, is_from_user, bot_user_id=None):
-        """Добавить сообщение в базу данных"""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # Проверяем существует ли пользователь
-                cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
-                user_exists = cursor.fetchone()
-                
-                if not user_exists:
-                    cursor.execute('''
-                        INSERT OR IGNORE INTO users (id, username, first_name, last_name, full_name)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (user_id, f'user_{user_id}', '', '', f'User {user_id}'))
-                
-                cursor.execute('''
-                    INSERT INTO messages (user_id, text, timestamp, is_from_user, bot_user_id)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (user_id, text, datetime.now().isoformat(), is_from_user, bot_user_id))
-                
-                # Обновляем время последней активности пользователя
-                cursor.execute('''
-                    UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE id = ?
-                ''', (user_id,))
-                
-                conn.commit()
-                return True
-        except Exception as e:
-            logger.error(f"Ошибка добавления сообщения: {e}")
-            return False
 
     def get_active_subscribers_count(self, bot_user_id, since_date):
         """Получить количество активных подписчиков с определенной даты"""

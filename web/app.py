@@ -226,12 +226,11 @@ def broadcast():
                 
                 # Отправляем рассылку через бота пользователя
                 import asyncio
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
                 try:
-                    success_count, failed_count = loop.run_until_complete(user_bot.send_broadcast(message))
-                finally:
-                    loop.close()
+                    success_count, failed_count = asyncio.run(user_bot.send_broadcast(message))
+                except Exception as e:
+                    print(f"Ошибка асинхронной рассылки: {e}")
+                    success_count, failed_count = 0, 1
                 
                 if success_count > 0:
                     flash(f'Сообщение отправлено {success_count} подписчикам!', 'success')
@@ -377,12 +376,11 @@ def send_broadcast():
         
         # Отправляем рассылку через бота пользователя
         import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         try:
-            success_count, failed_count = loop.run_until_complete(user_bot.send_broadcast(message))
-        finally:
-            loop.close()
+            success_count, failed_count = asyncio.run(user_bot.send_broadcast(message))
+        except Exception as e:
+            print(f"Ошибка асинхронной рассылки: {e}")
+            success_count, failed_count = 0, 1
         
         return jsonify({
             'success': True,
@@ -495,12 +493,7 @@ def send_message():
         # Отправляем сообщение через бота пользователя
         try:
             import asyncio
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(user_bot.application.bot.send_message(chat_id=user_id, text=message))
-            finally:
-                loop.close()
+            asyncio.run(user_bot.application.bot.send_message(chat_id=user_id, text=message))
             
             # Сохраняем сообщение в базу данных
             from database import Database
