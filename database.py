@@ -100,6 +100,20 @@ class Database:
                     # Поле уже существует
                     pass
                 
+                # Очищаем дублирующиеся записи пользователей
+                try:
+                    cursor.execute('''
+                        DELETE FROM users 
+                        WHERE id IN (
+                            SELECT id FROM users 
+                            GROUP BY id 
+                            HAVING COUNT(*) > 1
+                        )
+                    ''')
+                    logger.info("Очищены дублирующиеся записи пользователей")
+                except Exception as e:
+                    logger.warning(f"Ошибка очистки дублей: {e}")
+                
                 # Создаем индексы для быстрого поиска
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp)')
@@ -643,8 +657,12 @@ class Database:
                 SELECT DISTINCT u.id, u.username, u.first_name, u.last_name, u.created_at,
                        m.text as last_message_text, m.timestamp as last_message_time
                 FROM users u
-                INNER JOIN messages m ON u.id = m.user_id
-                WHERE m.bot_user_id = ?
+                INNER JOIN (
+                    SELECT user_id, text, timestamp,
+                           ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY timestamp DESC) as rn
+                    FROM messages
+                    WHERE bot_user_id = ?
+                ) m ON u.id = m.user_id AND m.rn = 1
                 ORDER BY u.created_at DESC
             ''', (bot_user_id,))
             
