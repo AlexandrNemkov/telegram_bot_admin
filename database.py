@@ -218,7 +218,7 @@ class Database:
             logger.error(f"Ошибка получения пользователей: {e}")
             return []
     
-    def add_message(self, user_id: int, text: str, is_from_user: bool = True, bot_user_id: int = None) -> bool:
+    def add_message(self, user_id: int, text: str, is_from_user: bool = True, bot_user_id = None) -> bool:
         """Добавление сообщения"""
         try:
             logger.info(f"🔍 Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}, bot_user_id={bot_user_id}")
@@ -251,6 +251,15 @@ class Database:
                 
                 conn.commit()
                 logger.info(f"✅ Сообщение успешно добавлено для пользователя {user_id}")
+                
+                # Проверяем что сообщение действительно сохранилось
+                cursor.execute('''
+                    SELECT COUNT(*) FROM messages 
+                    WHERE user_id = ? AND bot_user_id = ?
+                ''', (user_id, bot_user_id))
+                count = cursor.fetchone()[0]
+                logger.info(f"📊 Всего сообщений у пользователя {user_id} с ботом {bot_user_id}: {count}")
+                
                 return True
                 
         except Exception as e:
