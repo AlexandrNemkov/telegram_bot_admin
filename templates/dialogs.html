@@ -214,6 +214,10 @@ function sendMessage(userId, message) {
             addMessageToChat('admin', message, new Date());
             // Перезагружаем сообщения
             loadMessages(userId);
+            // Принудительно обновляем через 1 секунду
+            setTimeout(() => {
+                loadMessages(userId);
+            }, 1000);
         } else {
             alert('Ошибка отправки: ' + data.error);
         }
