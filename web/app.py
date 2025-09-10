@@ -224,29 +224,29 @@ def broadcast():
                     flash('Ваш бот не настроен или не запущен', 'error')
                     return redirect(url_for('broadcast'))
                 
-        # Отправляем рассылку через бота пользователя
-        import asyncio
-        import threading
-        
-        def send_broadcast_async():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(user_bot.send_broadcast(message))
-            finally:
-                loop.close()
-        
-        try:
-            # Запускаем в отдельном потоке
-            thread = threading.Thread(target=send_broadcast_async)
-            thread.start()
-            thread.join()
-            
-            # Получаем результат
-            success_count, failed_count = send_broadcast_async()
-        except Exception as e:
-            print(f"Ошибка асинхронной рассылки: {e}")
-            success_count, failed_count = 0, 1
+                # Отправляем рассылку через бота пользователя
+                import asyncio
+                import threading
+                
+                def send_broadcast_async():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        return loop.run_until_complete(user_bot.send_broadcast(message))
+                    finally:
+                        loop.close()
+                
+                try:
+                    # Запускаем в отдельном потоке
+                    thread = threading.Thread(target=send_broadcast_async)
+                    thread.start()
+                    thread.join()
+                    
+                    # Получаем результат
+                    success_count, failed_count = send_broadcast_async()
+                except Exception as e:
+                    print(f"Ошибка асинхронной рассылки: {e}")
+                    success_count, failed_count = 0, 1
                 
                 if success_count > 0:
                     flash(f'Сообщение отправлено {success_count} подписчикам!', 'success')
