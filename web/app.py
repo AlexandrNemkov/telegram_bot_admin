@@ -224,27 +224,42 @@ def broadcast():
                     flash('Ваш бот не настроен или не запущен', 'error')
                     return redirect(url_for('broadcast'))
                 
-                # Отправляем рассылку через бота пользователя
-                import asyncio
-                import threading
-                import concurrent.futures
+                # Отправляем рассылку через бота пользователя (синхронно)
+                import requests
+                from database import Database
                 
-                def send_broadcast_async():
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
+                db = Database()
+                users = db.get_users_for_bot(current_user.id)
+                
+                success_count = 0
+                failed_count = 0
+                
+                bot_token = user_bot.bot_token
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                
+                for user in users:
+                    user_id = user['id']
                     try:
-                        return loop.run_until_complete(user_bot.send_broadcast(message))
-                    finally:
-                        loop.close()
-                
-                try:
-                    # Запускаем в отдельном потоке с ThreadPoolExecutor
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(send_broadcast_async)
-                        success_count, failed_count = future.result()
-                except Exception as e:
-                    print(f"Ошибка асинхронной рассылки: {e}")
-                    success_count, failed_count = 0, 1
+                        data = {
+                            'chat_id': user_id,
+                            'text': message,
+                            'parse_mode': 'HTML'
+                        }
+                        
+                        response = requests.post(url, json=data, timeout=30)
+                        
+                        if response.status_code == 200:
+                            result = response.json()
+                            if result.get('ok'):
+                                success_count += 1
+                            else:
+                                failed_count += 1
+                        else:
+                            failed_count += 1
+                            
+                    except Exception as e:
+                        print(f"Ошибка отправки пользователю {user_id}: {e}")
+                        failed_count += 1
                 
                 if success_count > 0:
                     flash(f'Сообщение отправлено {success_count} подписчикам!', 'success')
@@ -388,27 +403,42 @@ def send_broadcast():
         if not user_bot:
             return jsonify({'error': 'Ваш бот не настроен или не запущен'}), 500
         
-        # Отправляем рассылку через бота пользователя
-        import asyncio
-        import threading
-        import concurrent.futures
+        # Отправляем рассылку через бота пользователя (синхронно)
+        import requests
+        from database import Database
         
-        def send_broadcast_async():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        db = Database()
+        users = db.get_users_for_bot(current_user.id)
+        
+        success_count = 0
+        failed_count = 0
+        
+        bot_token = user_bot.bot_token
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        
+        for user in users:
+            user_id = user['id']
             try:
-                return loop.run_until_complete(user_bot.send_broadcast(message))
-            finally:
-                loop.close()
-        
-        try:
-            # Запускаем в отдельном потоке с ThreadPoolExecutor
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(send_broadcast_async)
-                success_count, failed_count = future.result()
-        except Exception as e:
-            print(f"Ошибка асинхронной рассылки: {e}")
-            success_count, failed_count = 0, 1
+                data = {
+                    'chat_id': user_id,
+                    'text': message,
+                    'parse_mode': 'HTML'
+                }
+                
+                response = requests.post(url, json=data, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get('ok'):
+                        success_count += 1
+                    else:
+                        failed_count += 1
+                else:
+                    failed_count += 1
+                    
+            except Exception as e:
+                print(f"Ошибка отправки пользователю {user_id}: {e}")
+                failed_count += 1
         
         return jsonify({
             'success': True,
@@ -518,32 +548,34 @@ def send_message():
         if not user_bot:
             return jsonify({'success': False, 'error': 'Ваш бот не настроен'})
         
-        # Отправляем сообщение через бота пользователя
+        # Отправляем сообщение через бота пользователя (синхронно)
         try:
-            import asyncio
-            import threading
-            import concurrent.futures
+            import requests
             
-            def send_message_async():
-                # Создаем новый event loop в отдельном потоке
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    return loop.run_until_complete(user_bot.application.bot.send_message(chat_id=user_id, text=message))
-                finally:
-                    loop.close()
+            # Используем прямой HTTP API вместо асинхронного кода
+            bot_token = user_bot.bot_token
+            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            data = {
+                'chat_id': user_id,
+                'text': message,
+                'parse_mode': 'HTML'
+            }
             
-            # Запускаем в отдельном потоке с ThreadPoolExecutor
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(send_message_async)
-                future.result()  # Ждем завершения
+            response = requests.post(url, json=data, timeout=30)
             
-            # Сохраняем сообщение в базу данных
-            from database import Database
-            db = Database()
-            db.add_message(user_id, message, False, current_user.id)  # False = от бота
-            
-            return jsonify({'success': True})
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('ok'):
+                    # Сохраняем сообщение в базу данных
+                    from database import Database
+                    db = Database()
+                    db.add_message(user_id, message, False, current_user.id)  # False = от бота
+                    return jsonify({'success': True})
+                else:
+                    return jsonify({'success': False, 'error': f'Telegram API ошибка: {result}'})
+            else:
+                return jsonify({'success': False, 'error': f'HTTP ошибка {response.status_code}'})
+                
         except Exception as e:
             return jsonify({'success': False, 'error': f'Ошибка отправки: {str(e)}'})
             
@@ -577,14 +609,31 @@ def send_file():
             temp_path = tmp_file.name
         
         try:
-            # Отправляем файл через бота пользователя
-            import asyncio
-            success = asyncio.run(user_bot.send_file_to_user(user_id, temp_path, file.filename, caption))
+            # Отправляем файл через бота пользователя (синхронно)
+            import requests
             
-            if success:
-                return jsonify({'success': True})
-            else:
-                return jsonify({'success': False, 'error': 'Ошибка отправки файла'})
+            bot_token = user_bot.bot_token
+            url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+            
+            with open(temp_path, 'rb') as file:
+                files = {
+                    'document': (file.filename, file, 'application/octet-stream')
+                }
+                data = {
+                    'chat_id': user_id,
+                    'caption': caption
+                }
+                
+                response = requests.post(url, data=data, files=files, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get('ok'):
+                        return jsonify({'success': True})
+                    else:
+                        return jsonify({'success': False, 'error': f'Telegram API ошибка: {result}'})
+                else:
+                    return jsonify({'success': False, 'error': f'HTTP ошибка {response.status_code}'})
         finally:
             # Удаляем временный файл
             try:
@@ -621,9 +670,45 @@ def send_broadcast_file():
             temp_path = tmp_file.name
         
         try:
-            # Отправляем файл всем подписчикам
-            import asyncio
-            success_count, failed_count = asyncio.run(user_bot.send_broadcast_file(temp_path, file.filename, caption))
+            # Отправляем файл всем подписчикам (синхронно)
+            import requests
+            from database import Database
+            
+            db = Database()
+            users = db.get_users_for_bot(current_user.id)
+            
+            success_count = 0
+            failed_count = 0
+            
+            bot_token = user_bot.bot_token
+            url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+            
+            for user in users:
+                user_id = user['id']
+                try:
+                    with open(temp_path, 'rb') as file_obj:
+                        files = {
+                            'document': (file.filename, file_obj, 'application/octet-stream')
+                        }
+                        data = {
+                            'chat_id': user_id,
+                            'caption': caption
+                        }
+                        
+                        response = requests.post(url, data=data, files=files, timeout=30)
+                        
+                        if response.status_code == 200:
+                            result = response.json()
+                            if result.get('ok'):
+                                success_count += 1
+                            else:
+                                failed_count += 1
+                        else:
+                            failed_count += 1
+                            
+                except Exception as e:
+                    print(f"Ошибка отправки файла пользователю {user_id}: {e}")
+                    failed_count += 1
             
             return jsonify({
                 'success': True,
