@@ -242,10 +242,11 @@ class Database:
                 
                 # Добавляем сообщение
                 logger.info(f"💾 Добавляем сообщение в БД...")
+                current_time = datetime.now().isoformat()
                 cursor.execute('''
                     INSERT INTO messages (user_id, text, is_from_user, timestamp, bot_user_id)
-                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
-                ''', (user_id, text, is_from_user, bot_user_id))
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (user_id, text, is_from_user, current_time, bot_user_id))
                 
                 # Обновляем время последней активности пользователя
                 cursor.execute('''
