@@ -227,6 +227,7 @@ def broadcast():
                 # Отправляем рассылку через бота пользователя
                 import asyncio
                 import threading
+                import concurrent.futures
                 
                 def send_broadcast_async():
                     loop = asyncio.new_event_loop()
@@ -237,13 +238,10 @@ def broadcast():
                         loop.close()
                 
                 try:
-                    # Запускаем в отдельном потоке
-                    thread = threading.Thread(target=send_broadcast_async)
-                    thread.start()
-                    thread.join()
-                    
-                    # Получаем результат
-                    success_count, failed_count = send_broadcast_async()
+                    # Запускаем в отдельном потоке с ThreadPoolExecutor
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(send_broadcast_async)
+                        success_count, failed_count = future.result()
                 except Exception as e:
                     print(f"Ошибка асинхронной рассылки: {e}")
                     success_count, failed_count = 0, 1
@@ -393,6 +391,7 @@ def send_broadcast():
         # Отправляем рассылку через бота пользователя
         import asyncio
         import threading
+        import concurrent.futures
         
         def send_broadcast_async():
             loop = asyncio.new_event_loop()
@@ -403,13 +402,10 @@ def send_broadcast():
                 loop.close()
         
         try:
-            # Запускаем в отдельном потоке
-            thread = threading.Thread(target=send_broadcast_async)
-            thread.start()
-            thread.join()
-            
-            # Получаем результат
-            success_count, failed_count = send_broadcast_async()
+            # Запускаем в отдельном потоке с ThreadPoolExecutor
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(send_broadcast_async)
+                success_count, failed_count = future.result()
         except Exception as e:
             print(f"Ошибка асинхронной рассылки: {e}")
             success_count, failed_count = 0, 1
@@ -526,20 +522,21 @@ def send_message():
         try:
             import asyncio
             import threading
+            import concurrent.futures
             
-            # Создаем новый event loop в отдельном потоке
             def send_message_async():
+                # Создаем новый event loop в отдельном потоке
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    loop.run_until_complete(user_bot.application.bot.send_message(chat_id=user_id, text=message))
+                    return loop.run_until_complete(user_bot.application.bot.send_message(chat_id=user_id, text=message))
                 finally:
                     loop.close()
             
-            # Запускаем в отдельном потоке
-            thread = threading.Thread(target=send_message_async)
-            thread.start()
-            thread.join()
+            # Запускаем в отдельном потоке с ThreadPoolExecutor
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(send_message_async)
+                future.result()  # Ждем завершения
             
             # Сохраняем сообщение в базу данных
             from database import Database
