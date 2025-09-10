@@ -222,6 +222,7 @@ class Database:
         """Добавление сообщения"""
         try:
             logger.info(f"🔍 Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}, bot_user_id={bot_user_id}")
+            print(f"🔍 DEBUG: Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}, bot_user_id={bot_user_id}")
             
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -259,6 +260,7 @@ class Database:
                 ''', (user_id, bot_user_id))
                 count = cursor.fetchone()[0]
                 logger.info(f"📊 Всего сообщений у пользователя {user_id} с ботом {bot_user_id}: {count}")
+                print(f"📊 DEBUG: Всего сообщений у пользователя {user_id} с ботом {bot_user_id}: {count}")
                 
                 return True
                 
@@ -709,6 +711,7 @@ class Database:
                 })
             
             logger.info(f"📊 Получено {len(messages)} сообщений для пользователя {user_id} с ботом {bot_user_id}")
+            print(f"📊 DEBUG: Получено {len(messages)} сообщений для пользователя {user_id} с ботом {bot_user_id}")
             return messages
 
     def get_last_message_for_user(self, user_id, bot_user_id):
