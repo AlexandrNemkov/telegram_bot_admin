@@ -42,6 +42,7 @@ class UserBot:
             
             # Добавляем обработчики
             self.application.add_handler(CommandHandler("start", self.start_command_handler))
+            self.application.add_handler(CommandHandler("help", self.help_command_handler))
             self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.message_handler))
             
             # Запускаем бота
@@ -80,7 +81,7 @@ class UserBot:
             self.subscribers.add(user_id)
             
             # Отправляем приветственное сообщение
-            await update.message.reply_text(self.start_command)
+            await update.message.reply_text(self.welcome_message)
             
             # Сохраняем пользователя в базу данных
             await self.save_user_to_db(user_id, username, first_name)
@@ -89,6 +90,21 @@ class UserBot:
             
         except Exception as e:
             logger.error(f"❌ Ошибка обработки /start в боте {self.user_id}: {e}")
+    
+    async def help_command_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработчик команды /help"""
+        try:
+            help_text = """
+🤖 Доступные команды:
+/start - Начать работу с ботом
+/help - Показать эту справку
+
+Для получения дополнительной информации обратитесь к администратору.
+            """
+            await update.message.reply_text(help_text)
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка обработки /help в боте {self.user_id}: {e}")
     
     async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик текстовых сообщений"""
