@@ -502,12 +502,16 @@ def get_messages(user_id):
         import logging
         logger = logging.getLogger(__name__)
         
-        logger.info(f"Запрашиваем сообщения для пользователя {user_id}")
+        logger.info(f"Запрашиваем сообщения для пользователя {user_id}, bot_user_id={current_user.id}")
         
         # Получаем сообщения только для бота текущего пользователя
         db = Database()
         messages = db.get_messages_between_users(user_id, current_user.id)
-        logger.info(f"Получено {len(messages)} сообщений для пользователя {user_id}")
+        logger.info(f"Получено {len(messages)} сообщений для пользователя {user_id} с ботом {current_user.id}")
+        
+        # Логируем в файл
+        with open('/tmp/debug.log', 'a') as f:
+            f.write(f"🔍 DEBUG: API get_messages: user_id={user_id}, bot_user_id={current_user.id}, messages_count={len(messages)}\n")
         
         # Форматируем сообщения для фронтенда
         formatted_messages = []
