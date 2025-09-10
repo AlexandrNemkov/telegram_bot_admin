@@ -190,6 +190,13 @@ function loadMessages(userId) {
 }
 
 function sendMessage(userId, message) {
+    // Защита от дублирования - блокируем кнопку
+    const sendButton = document.querySelector('button[type="submit"]');
+    if (sendButton.disabled) return;
+    
+    sendButton.disabled = true;
+    sendButton.textContent = 'Отправка...';
+    
     fetch('/api/send_message', {
         method: 'POST',
         headers: {
@@ -205,6 +212,8 @@ function sendMessage(userId, message) {
         if (data.success) {
             // Добавляем сообщение в чат
             addMessageToChat('admin', message, new Date());
+            // Перезагружаем сообщения
+            loadMessages(userId);
         } else {
             alert('Ошибка отправки: ' + data.error);
         }
@@ -212,6 +221,11 @@ function sendMessage(userId, message) {
     .catch(error => {
         console.error('Ошибка отправки:', error);
         alert('Ошибка отправки сообщения');
+    })
+    .finally(() => {
+        // Разблокируем кнопку
+        sendButton.disabled = false;
+        sendButton.textContent = 'Отправить';
     });
 }
 
