@@ -683,7 +683,7 @@ def initialize_bots():
                         user_settings['bot_token'],
                         user_settings.get('bot_username', ''),
                         user_settings.get('welcome_message', 'Добро пожаловать! 👋'),
-                        user_settings.get('start_command', 'Добро пожаловать! Нажмите /help для справки.')
+                        user_settings.get('welcome_message', 'Добро пожаловать! 👋')  # Используем welcome_message для команды /start
                     )
         
         print(f"Инициализировано {len(bot_manager.get_all_bots())} ботов")
