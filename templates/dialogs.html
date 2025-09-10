@@ -235,7 +235,6 @@ function sendMessage(userId, message) {
 
 function displayMessages(messages) {
     const container = document.getElementById('messagesContainer');
-    container.innerHTML = '';
     
     if (messages.length === 0) {
         container.innerHTML = `
@@ -245,6 +244,11 @@ function displayMessages(messages) {
             </div>
         `;
     } else {
+        // Очищаем только если это полная перезагрузка
+        if (container.children.length === 0 || container.querySelector('.text-center.text-muted')) {
+            container.innerHTML = '';
+        }
+        
         messages.forEach(msg => {
             const timestamp = new Date(msg.timestamp);
             addMessageToChat(msg.is_from_user ? 'user' : 'admin', msg.text, timestamp);
