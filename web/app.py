@@ -224,13 +224,29 @@ def broadcast():
                     flash('Ваш бот не настроен или не запущен', 'error')
                     return redirect(url_for('broadcast'))
                 
-                # Отправляем рассылку через бота пользователя
-                import asyncio
-                try:
-                    success_count, failed_count = asyncio.run(user_bot.send_broadcast(message))
-                except Exception as e:
-                    print(f"Ошибка асинхронной рассылки: {e}")
-                    success_count, failed_count = 0, 1
+        # Отправляем рассылку через бота пользователя
+        import asyncio
+        import threading
+        
+        def send_broadcast_async():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(user_bot.send_broadcast(message))
+            finally:
+                loop.close()
+        
+        try:
+            # Запускаем в отдельном потоке
+            thread = threading.Thread(target=send_broadcast_async)
+            thread.start()
+            thread.join()
+            
+            # Получаем результат
+            success_count, failed_count = send_broadcast_async()
+        except Exception as e:
+            print(f"Ошибка асинхронной рассылки: {e}")
+            success_count, failed_count = 0, 1
                 
                 if success_count > 0:
                     flash(f'Сообщение отправлено {success_count} подписчикам!', 'success')
@@ -376,8 +392,24 @@ def send_broadcast():
         
         # Отправляем рассылку через бота пользователя
         import asyncio
+        import threading
+        
+        def send_broadcast_async():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(user_bot.send_broadcast(message))
+            finally:
+                loop.close()
+        
         try:
-            success_count, failed_count = asyncio.run(user_bot.send_broadcast(message))
+            # Запускаем в отдельном потоке
+            thread = threading.Thread(target=send_broadcast_async)
+            thread.start()
+            thread.join()
+            
+            # Получаем результат
+            success_count, failed_count = send_broadcast_async()
         except Exception as e:
             print(f"Ошибка асинхронной рассылки: {e}")
             success_count, failed_count = 0, 1
@@ -493,7 +525,21 @@ def send_message():
         # Отправляем сообщение через бота пользователя
         try:
             import asyncio
-            asyncio.run(user_bot.application.bot.send_message(chat_id=user_id, text=message))
+            import threading
+            
+            # Создаем новый event loop в отдельном потоке
+            def send_message_async():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(user_bot.application.bot.send_message(chat_id=user_id, text=message))
+                finally:
+                    loop.close()
+            
+            # Запускаем в отдельном потоке
+            thread = threading.Thread(target=send_message_async)
+            thread.start()
+            thread.join()
             
             # Сохраняем сообщение в базу данных
             from database import Database
