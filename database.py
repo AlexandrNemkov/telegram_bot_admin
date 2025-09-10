@@ -222,7 +222,9 @@ class Database:
         """Добавление сообщения"""
         try:
             logger.info(f"🔍 Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}, bot_user_id={bot_user_id}")
-            print(f"🔍 DEBUG: Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}, bot_user_id={bot_user_id}")
+            # Логируем в файл
+            with open('/tmp/debug.log', 'a') as f:
+                f.write(f"🔍 DEBUG: Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}, bot_user_id={bot_user_id}\n")
             
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -260,7 +262,9 @@ class Database:
                 ''', (user_id, bot_user_id))
                 count = cursor.fetchone()[0]
                 logger.info(f"📊 Всего сообщений у пользователя {user_id} с ботом {bot_user_id}: {count}")
-                print(f"📊 DEBUG: Всего сообщений у пользователя {user_id} с ботом {bot_user_id}: {count}")
+                # Логируем в файл
+                with open('/tmp/debug.log', 'a') as f:
+                    f.write(f"📊 DEBUG: Всего сообщений у пользователя {user_id} с ботом {bot_user_id}: {count}\n")
                 
                 return True
                 
@@ -711,7 +715,9 @@ class Database:
                 })
             
             logger.info(f"📊 Получено {len(messages)} сообщений для пользователя {user_id} с ботом {bot_user_id}")
-            print(f"📊 DEBUG: Получено {len(messages)} сообщений для пользователя {user_id} с ботом {bot_user_id}")
+            # Логируем в файл
+            with open('/tmp/debug.log', 'a') as f:
+                f.write(f"📊 DEBUG: Получено {len(messages)} сообщений для пользователя {user_id} с ботом {bot_user_id}\n")
             return messages
 
     def get_last_message_for_user(self, user_id, bot_user_id):

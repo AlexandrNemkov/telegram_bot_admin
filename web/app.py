@@ -569,9 +569,12 @@ def send_message():
                     # Сохраняем сообщение в базу данных
                     from database import Database
                     db = Database()
-                    print(f"🔍 DEBUG: Отправляем сообщение в базу: user_id={user_id}, message='{message[:50]}...', bot_id={current_user.id}")
+                    # Логируем в файл
+                    with open('/tmp/debug.log', 'a') as f:
+                        f.write(f"🔍 DEBUG: Отправляем сообщение в базу: user_id={user_id}, message='{message[:50]}...', bot_id={current_user.id}\n")
                     success = db.add_message(user_id, message, False, current_user.id)  # False = от бота
-                    print(f"🔍 DEBUG: Результат сохранения в базу: {success}")
+                    with open('/tmp/debug.log', 'a') as f:
+                        f.write(f"🔍 DEBUG: Результат сохранения в базу: {success}\n")
                     return jsonify({'success': True})
                 else:
                     return jsonify({'success': False, 'error': f'Telegram API ошибка: {result}'})
