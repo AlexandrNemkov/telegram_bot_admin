@@ -707,6 +707,8 @@ class Database:
                     'timestamp': row[2],
                     'is_from_user': bool(row[3])
                 })
+            
+            logger.info(f"📊 Получено {len(messages)} сообщений для пользователя {user_id} с ботом {bot_user_id}")
             return messages
 
     def get_last_message_for_user(self, user_id, bot_user_id):

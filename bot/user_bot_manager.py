@@ -99,7 +99,7 @@ class UserBot:
                         logger.error(f"❌ Ошибка отправки PDF пользователю {user_id}: {e}")
             
             # Сохраняем пользователя в базу данных
-            await self.save_user_to_db(user_id, username, first_name)
+            self.save_user_to_db(user_id, username, first_name)
             
             logger.info(f"👋 Новый пользователь {user_id} (@{username}) в боте {self.user_id}")
             
@@ -128,7 +128,7 @@ class UserBot:
             message_text = update.message.text
             
             # Сохраняем сообщение в базу данных
-            await self.save_message_to_db(user_id, message_text, True)
+            self.save_message_to_db(user_id, message_text, True)
             
             # НЕ отправляем автоматический ответ - администратор ответит через веб-интерфейс
             # await update.message.reply_text("Сообщение получено! Администратор скоро ответит.")
@@ -138,7 +138,7 @@ class UserBot:
         except Exception as e:
             logger.error(f"❌ Ошибка обработки сообщения в боте {self.user_id}: {e}")
     
-    async def save_user_to_db(self, user_id: int, username: str, first_name: str):
+    def save_user_to_db(self, user_id: int, username: str, first_name: str):
         """Сохранение пользователя в базу данных"""
         try:
             from database import Database
@@ -147,7 +147,7 @@ class UserBot:
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения пользователя {user_id}: {e}")
     
-    async def save_message_to_db(self, user_id: int, text: str, is_from_user: bool):
+    def save_message_to_db(self, user_id: int, text: str, is_from_user: bool):
         """Сохранение сообщения в базу данных"""
         try:
             from database import Database
