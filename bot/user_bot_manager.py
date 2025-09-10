@@ -166,6 +166,50 @@ class UserBot:
                 failed_count += 1
         
         return success_count, failed_count
+    
+    async def send_file_to_user(self, user_id: int, file_path: str, filename: str, caption: str = ""):
+        """Отправка файла конкретному пользователю"""
+        try:
+            with open(file_path, 'rb') as file:
+                await self.application.bot.send_document(
+                    chat_id=user_id,
+                    document=file,
+                    filename=filename,
+                    caption=caption
+                )
+            logger.info(f"✅ Файл {filename} отправлен пользователю {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Ошибка отправки файла пользователю {user_id}: {e}")
+            return False
+    
+    async def send_broadcast_file(self, file_path: str, filename: str, caption: str = "") -> Tuple[int, int]:
+        """Отправка файла всем подписчикам"""
+        success_count = 0
+        failed_count = 0
+        
+        # Получаем подписчиков из базы данных
+        from database import Database
+        db = Database()
+        users = db.get_users_for_bot(self.user_id)
+        
+        for user in users:
+            user_id = user['id']
+            try:
+                with open(file_path, 'rb') as file:
+                    await self.application.bot.send_document(
+                        chat_id=user_id,
+                        document=file,
+                        filename=filename,
+                        caption=caption
+                    )
+                success_count += 1
+                logger.info(f"✅ Файл {filename} отправлен пользователю {user_id}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка отправки файла пользователю {user_id}: {e}")
+                failed_count += 1
+        
+        return success_count, failed_count
 
 class UserBotManager:
     """Менеджер всех пользовательских ботов"""

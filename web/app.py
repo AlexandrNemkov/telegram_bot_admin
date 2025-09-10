@@ -507,6 +507,97 @@ def send_message():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/send_file', methods=['POST'])
+@login_required
+def send_file():
+    """Отправка файла пользователю"""
+    try:
+        user_id = request.form.get('user_id')
+        file = request.files.get('file')
+        caption = request.form.get('caption', '')
+        
+        if not user_id or not file:
+            return jsonify({'success': False, 'error': 'Неверные параметры'})
+        
+        from bot.user_bot_manager import bot_manager
+        
+        # Получаем бота текущего пользователя
+        user_bot = bot_manager.get_bot(current_user.id)
+        if not user_bot:
+            return jsonify({'success': False, 'error': 'Ваш бот не настроен'})
+        
+        # Сохраняем файл временно
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+            file.save(tmp_file.name)
+            temp_path = tmp_file.name
+        
+        try:
+            # Отправляем файл через бота пользователя
+            import asyncio
+            success = asyncio.run(user_bot.send_file_to_user(user_id, temp_path, file.filename, caption))
+            
+            if success:
+                return jsonify({'success': True})
+            else:
+                return jsonify({'success': False, 'error': 'Ошибка отправки файла'})
+        finally:
+            # Удаляем временный файл
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/send_broadcast_file', methods=['POST'])
+@login_required
+def send_broadcast_file():
+    """Отправка файла всем подписчикам"""
+    try:
+        file = request.files.get('file')
+        caption = request.form.get('caption', '')
+        
+        if not file:
+            return jsonify({'success': False, 'error': 'Файл не выбран'})
+        
+        from bot.user_bot_manager import bot_manager
+        
+        # Получаем бота текущего пользователя
+        user_bot = bot_manager.get_bot(current_user.id)
+        if not user_bot:
+            return jsonify({'success': False, 'error': 'Ваш бот не настроен'})
+        
+        # Сохраняем файл временно
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+            file.save(tmp_file.name)
+            temp_path = tmp_file.name
+        
+        try:
+            # Отправляем файл всем подписчикам
+            import asyncio
+            success_count, failed_count = asyncio.run(user_bot.send_broadcast_file(temp_path, file.filename, caption))
+            
+            return jsonify({
+                'success': True,
+                'message': f'Файл отправлен {success_count} подписчикам',
+                'success_count': success_count,
+                'failed_count': failed_count
+            })
+        finally:
+            # Удаляем временный файл
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 # ===== API ДЛЯ УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ =====
 
 @app.route('/api/users', methods=['POST'])
