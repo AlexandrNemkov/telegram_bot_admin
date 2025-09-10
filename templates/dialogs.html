@@ -210,6 +210,8 @@ function sendMessage(userId, message) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Добавляем сообщение сразу с текущим временем
+            addMessageToChat('admin', message, new Date());
             // Перезагружаем сообщения
             loadMessages(userId);
         } else {
