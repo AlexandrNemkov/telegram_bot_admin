@@ -83,6 +83,21 @@ class UserBot:
             # Отправляем приветственное сообщение
             await update.message.reply_text(self.welcome_message)
             
+            # Отправляем PDF файл если он есть
+            from database import Database
+            db = Database()
+            user_settings = db.get_user_settings(self.user_id)
+            if user_settings and user_settings.get('welcome_pdf_path'):
+                pdf_path = user_settings['welcome_pdf_path']
+                import os
+                if os.path.exists(pdf_path):
+                    try:
+                        filename = os.path.basename(pdf_path)
+                        await self.send_file_to_user(user_id, pdf_path, filename, "Добро пожаловать! 📄")
+                        logger.info(f"📄 PDF файл отправлен пользователю {user_id}")
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка отправки PDF пользователю {user_id}: {e}")
+            
             # Сохраняем пользователя в базу данных
             await self.save_user_to_db(user_id, username, first_name)
             
@@ -150,10 +165,17 @@ class UserBot:
         success_count = 0
         failed_count = 0
         
+        # Проверяем что бот запущен
+        if not self.application or not self.is_running:
+            logger.error(f"❌ Бот {self.user_id} не запущен")
+            return 0, 1
+        
         # Получаем подписчиков из базы данных
         from database import Database
         db = Database()
         users = db.get_users_for_bot(self.user_id)
+        
+        logger.info(f"📤 Начинаем рассылку для бота {self.user_id}, найдено {len(users)} подписчиков")
         
         for user in users:
             user_id = user['id']
@@ -165,6 +187,7 @@ class UserBot:
                 logger.error(f"❌ Ошибка отправки сообщения пользователю {user_id}: {e}")
                 failed_count += 1
         
+        logger.info(f"📊 Рассылка завершена: {success_count} успешно, {failed_count} ошибок")
         return success_count, failed_count
     
     async def send_file_to_user(self, user_id: int, file_path: str, filename: str, caption: str = ""):
