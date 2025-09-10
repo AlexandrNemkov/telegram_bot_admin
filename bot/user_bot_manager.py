@@ -150,10 +150,17 @@ class UserBot:
         success_count = 0
         failed_count = 0
         
-        for user_id in self.subscribers:
+        # Получаем подписчиков из базы данных
+        from database import Database
+        db = Database()
+        users = db.get_users_for_bot(self.user_id)
+        
+        for user in users:
+            user_id = user['id']
             try:
                 await self.application.bot.send_message(chat_id=user_id, text=message)
                 success_count += 1
+                logger.info(f"✅ Сообщение отправлено пользователю {user_id}")
             except Exception as e:
                 logger.error(f"❌ Ошибка отправки сообщения пользователю {user_id}: {e}")
                 failed_count += 1
