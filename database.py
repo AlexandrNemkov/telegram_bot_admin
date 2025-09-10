@@ -42,7 +42,9 @@ class Database:
                         text TEXT NOT NULL,
                         is_from_user BOOLEAN NOT NULL,
                         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users (id)
+                        bot_user_id INTEGER,
+                        FOREIGN KEY (user_id) REFERENCES users (id),
+                        FOREIGN KEY (bot_user_id) REFERENCES system_users (id)
                     )
                 ''')
                 
@@ -90,9 +92,18 @@ class Database:
                     )
                 ''')
                 
+                # Миграция: добавляем поле bot_user_id если его нет
+                try:
+                    cursor.execute('ALTER TABLE messages ADD COLUMN bot_user_id INTEGER')
+                    logger.info("Добавлено поле bot_user_id в таблицу messages")
+                except sqlite3.OperationalError:
+                    # Поле уже существует
+                    pass
+                
                 # Создаем индексы для быстрого поиска
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_bot_user_id ON messages(bot_user_id)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_system_users_username ON system_users(username)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_system_users_role ON system_users(role)')
@@ -193,10 +204,10 @@ class Database:
             logger.error(f"Ошибка получения пользователей: {e}")
             return []
     
-    def add_message(self, user_id: int, text: str, is_from_user: bool = True) -> bool:
+    def add_message(self, user_id: int, text: str, is_from_user: bool = True, bot_user_id: int = None) -> bool:
         """Добавление сообщения"""
         try:
-            logger.info(f"🔍 Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}")
+            logger.info(f"🔍 Database.add_message: user_id={user_id}, text='{text[:50]}...', is_from_user={is_from_user}, bot_user_id={bot_user_id}")
             
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -215,9 +226,9 @@ class Database:
                 # Добавляем сообщение
                 logger.info(f"💾 Добавляем сообщение в БД...")
                 cursor.execute('''
-                    INSERT INTO messages (user_id, text, is_from_user, timestamp)
-                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ''', (user_id, text, is_from_user))
+                    INSERT INTO messages (user_id, text, is_from_user, timestamp, bot_user_id)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+                ''', (user_id, text, is_from_user, bot_user_id))
                 
                 # Обновляем время последней активности пользователя
                 cursor.execute('''
@@ -629,7 +640,8 @@ class Database:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT DISTINCT u.id, u.username, u.first_name, u.last_name, u.created_at
+                SELECT DISTINCT u.id, u.username, u.first_name, u.last_name, u.created_at,
+                       m.text as last_message_text, m.timestamp as last_message_time
                 FROM users u
                 INNER JOIN messages m ON u.id = m.user_id
                 WHERE m.bot_user_id = ?
@@ -643,7 +655,9 @@ class Database:
                     'username': row[1],
                     'first_name': row[2],
                     'last_name': row[3],
-                    'created_at': row[4]
+                    'created_at': row[4],
+                    'last_message_text': row[5],
+                    'last_message_time': row[6]
                 })
             return users
 
@@ -664,7 +678,7 @@ class Database:
                     'id': row[0],
                     'text': row[1],
                     'timestamp': row[2],
-                    'is_from_user': row[3]
+                    'is_from_user': bool(row[3])
                 })
             return messages
 
@@ -686,20 +700,41 @@ class Database:
                     'id': row[0],
                     'text': row[1],
                     'timestamp': row[2],
-                    'is_from_user': row[3]
+                    'is_from_user': bool(row[3])
                 }
             return None
 
     def add_message(self, user_id, text, is_from_user, bot_user_id=None):
         """Добавить сообщение в базу данных"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO messages (user_id, text, timestamp, is_from_user, bot_user_id)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (user_id, text, datetime.now().isoformat(), is_from_user, bot_user_id))
-            conn.commit()
-            return True
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Проверяем существует ли пользователь
+                cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
+                user_exists = cursor.fetchone()
+                
+                if not user_exists:
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO users (id, username, first_name, last_name, full_name)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (user_id, f'user_{user_id}', '', '', f'User {user_id}'))
+                
+                cursor.execute('''
+                    INSERT INTO messages (user_id, text, timestamp, is_from_user, bot_user_id)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (user_id, text, datetime.now().isoformat(), is_from_user, bot_user_id))
+                
+                # Обновляем время последней активности пользователя
+                cursor.execute('''
+                    UPDATE users SET last_activity = CURRENT_TIMESTAMP WHERE id = ?
+                ''', (user_id,))
+                
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Ошибка добавления сообщения: {e}")
+            return False
 
     def get_active_subscribers_count(self, bot_user_id, since_date):
         """Получить количество активных подписчиков с определенной даты"""

@@ -216,28 +216,22 @@ def broadcast():
         message = request.form.get('message')
         if message:
             try:
-                # Отправляем сообщение всем подписчикам
-                success_count = 0
-                failed_count = 0
+                # Используем новую систему с bot_manager
+                from bot.user_bot_manager import bot_manager
+                user_bot = bot_manager.get_bot(current_user.id)
                 
-                print(f"Начинаем рассылку сообщения: {message}")
-                print(f"Всего подписчиков: {len(bot.subscribers)}")
+                if not user_bot:
+                    flash('Ваш бот не настроен или не запущен', 'error')
+                    return redirect(url_for('broadcast'))
                 
-                for user_id in bot.subscribers:
-                    try:
-                        print(f"Отправляем сообщение пользователю {user_id}")
-                        result = bot.send_message_to_user(user_id, message)
-                        if result:
-                            success_count += 1
-                            print(f"✅ Сообщение отправлено пользователю {user_id}")
-                        else:
-                            failed_count += 1
-                            print(f"❌ Ошибка отправки пользователю {user_id}")
-                    except Exception as e:
-                        failed_count += 1
-                        print(f"❌ Исключение при отправке пользователю {user_id}: {e}")
-                
-                print(f"Рассылка завершена: {success_count} успешно, {failed_count} ошибок")
+                # Отправляем рассылку через бота пользователя
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    success_count, failed_count = loop.run_until_complete(user_bot.send_broadcast(message))
+                finally:
+                    loop.close()
                 
                 if success_count > 0:
                     flash(f'Сообщение отправлено {success_count} подписчикам!', 'success')
@@ -366,7 +360,7 @@ def subscribers():
 
 @app.route('/api/send_broadcast', methods=['POST'])
 @login_required
-async def send_broadcast():
+def send_broadcast():
     data = request.get_json()
     message = data.get('message')
     
@@ -374,10 +368,6 @@ async def send_broadcast():
         return jsonify({'error': 'Сообщение не может быть пустым'}), 400
     
     try:
-        # Отправляем сообщение всем подписчикам
-        success_count = 0
-        failed_count = 0
-        
         # Отправляем сообщение через бота текущего пользователя
         from bot.user_bot_manager import bot_manager
         user_bot = bot_manager.get_bot(current_user.id)
@@ -386,7 +376,13 @@ async def send_broadcast():
             return jsonify({'error': 'Ваш бот не настроен или не запущен'}), 500
         
         # Отправляем рассылку через бота пользователя
-        success_count, failed_count = await user_bot.send_broadcast(message)
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            success_count, failed_count = loop.run_until_complete(user_bot.send_broadcast(message))
+        finally:
+            loop.close()
         
         return jsonify({
             'success': True,
@@ -479,7 +475,7 @@ def get_messages(user_id):
 
 @app.route('/api/send_message', methods=['POST'])
 @login_required
-async def send_message():
+def send_message():
     """Отправка сообщения пользователю"""
     try:
         data = request.get_json()
@@ -498,7 +494,13 @@ async def send_message():
         
         # Отправляем сообщение через бота пользователя
         try:
-            await user_bot.application.bot.send_message(chat_id=user_id, text=message)
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(user_bot.application.bot.send_message(chat_id=user_id, text=message))
+            finally:
+                loop.close()
             
             # Сохраняем сообщение в базу данных
             from database import Database
@@ -669,6 +671,37 @@ def change_password():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+def initialize_bots():
+    """Инициализация всех ботов при старте приложения"""
+    try:
+        from bot.user_bot_manager import bot_manager
+        from database import Database
+        
+        db = Database()
+        system_users = db.get_all_system_users()
+        
+        for user in system_users:
+            if user['is_active']:
+                user_settings = db.get_user_settings(user['id'])
+                if user_settings and user_settings.get('bot_token'):
+                    print(f"Инициализируем бота для пользователя {user['username']} (ID: {user['id']})")
+                    bot_manager.add_bot(
+                        user['id'],
+                        user_settings['bot_token'],
+                        user_settings.get('bot_username', ''),
+                        user_settings.get('welcome_message', 'Добро пожаловать! 👋'),
+                        user_settings.get('start_command', 'Добро пожаловать! Нажмите /help для справки.')
+                    )
+        
+        print(f"Инициализировано {len(bot_manager.get_all_bots())} ботов")
+        
+    except Exception as e:
+        print(f"Ошибка инициализации ботов: {e}")
+
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Инициализируем ботов при старте
+    initialize_bots()
+    
     app.run(debug=True, host='0.0.0.0', port=5000)
