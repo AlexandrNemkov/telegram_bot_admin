@@ -229,6 +229,8 @@ function sendMessage(userId, message) {
 
 function displayMessages(messages) {
     const container = document.getElementById('messagesContainer');
+    
+    // Очищаем контейнер
     container.innerHTML = '';
     
     if (messages.length === 0) {
@@ -238,12 +240,17 @@ function displayMessages(messages) {
                 <p>Нет сообщений</p>
             </div>
         `;
-    } else {
-        messages.forEach(msg => {
-            const timestamp = new Date(msg.timestamp);
-            addMessageToChat(msg.is_from_user ? 'user' : 'admin', msg.text, timestamp);
-        });
+        return;
     }
+    
+    // Добавляем все сообщения
+    messages.forEach(msg => {
+        const timestamp = new Date(msg.timestamp);
+        addMessageToChat(msg.is_from_user ? 'user' : 'admin', msg.text, timestamp);
+    });
+    
+    // Прокручиваем вниз
+    container.scrollTop = container.scrollHeight;
 }
 
 function addMessageToChat(sender, text, timestamp) {
