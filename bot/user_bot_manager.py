@@ -83,20 +83,35 @@ class UserBot:
             # Отправляем приветственное сообщение
             await update.message.reply_text(self.welcome_message)
             
-            # Отправляем PDF файл если он есть
+            # Отправляем приветственный файл по file_id если указан, иначе PDF по локальному пути
             from database import Database
             db = Database()
             user_settings = db.get_user_settings(self.user_id)
-            if user_settings and user_settings.get('welcome_pdf_path'):
-                pdf_path = user_settings['welcome_pdf_path']
-                import os
-                if os.path.exists(pdf_path):
+            if user_settings:
+                welcome_file_id = user_settings.get('welcome_file_id')
+                welcome_caption = user_settings.get('welcome_file_caption') or "Добро пожаловать! 📎"
+                if welcome_file_id:
                     try:
-                        filename = os.path.basename(pdf_path)
-                        await self.send_file_to_user(user_id, pdf_path, filename, "Добро пожаловать! 📄")
-                        logger.info(f"📄 PDF файл отправлен пользователю {user_id}")
-                    except Exception as e:
-                        logger.error(f"❌ Ошибка отправки PDF пользователю {user_id}: {e}")
+                        # Пытаемся отправить как документ
+                        await self.application.bot.send_document(chat_id=user_id, document=welcome_file_id, caption=welcome_caption)
+                        logger.info(f"📎 Welcome file_id отправлен пользователю {user_id}")
+                    except Exception as e_doc:
+                        try:
+                            # Если не документ — попробуем как фото
+                            await self.application.bot.send_photo(chat_id=user_id, photo=welcome_file_id, caption=welcome_caption)
+                            logger.info(f"🖼 Welcome photo_id отправлен пользователю {user_id}")
+                        except Exception as e_photo:
+                            logger.error(f"❌ Ошибка отправки welcome file_id: {e_doc} / {e_photo}")
+                elif user_settings.get('welcome_pdf_path'):
+                    pdf_path = user_settings['welcome_pdf_path']
+                    import os
+                    if os.path.exists(pdf_path):
+                        try:
+                            filename = os.path.basename(pdf_path)
+                            await self.send_file_to_user(user_id, pdf_path, filename, "Добро пожаловать! 📄")
+                            logger.info(f"📄 PDF файл отправлен пользователю {user_id}")
+                        except Exception as e:
+                            logger.error(f"❌ Ошибка отправки PDF пользователю {user_id}: {e}")
             
             # Сохраняем пользователя в базу данных
             self.save_user_to_db(user_id, username, first_name)

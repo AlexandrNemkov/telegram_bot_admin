@@ -1,0 +1,25 @@
+[Unit]
+Description=User Bots Runner (starts all configured user bots)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=telegram_bot_admin
+Group=telegram_bot_admin
+WorkingDirectory=/home/telegram_bot_admin
+Environment=PATH=/home/telegram_bot_admin/venv/bin
+Environment=PYTHONPATH=/home/telegram_bot_admin
+ExecStart=/home/telegram_bot_admin/venv/bin/python start_user_bots.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
+
+

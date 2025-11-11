@@ -83,6 +83,10 @@ class Database:
                         user_id INTEGER NOT NULL,
                         welcome_message TEXT DEFAULT 'Добро пожаловать! 👋',
                         welcome_pdf_path TEXT DEFAULT '',
+                        welcome_file_id TEXT DEFAULT '',
+                        welcome_file_caption TEXT DEFAULT '',
+                        bot_token TEXT DEFAULT '',
+                        bot_username TEXT DEFAULT '',
                         bot_name TEXT DEFAULT 'Мой бот',
                         bot_description TEXT DEFAULT '',
                         start_command TEXT DEFAULT 'Добро пожаловать! Нажмите /help для справки.',
@@ -91,6 +95,47 @@ class Database:
                         FOREIGN KEY (user_id) REFERENCES system_users (id)
                     )
                 ''')
+                
+                # ===== Дополнительные таблицы для рассылок и логов доставки =====
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS campaigns (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        text TEXT,
+                        photo_file_id TEXT,
+                        scheduled_at TIMESTAMP,
+                        status TEXT DEFAULT 'scheduled', -- scheduled, sending, sent, failed, canceled
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES system_users (id)
+                    )
+                ''')
+                
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS delivery_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,         -- подписчик (получатель)
+                        bot_user_id INTEGER NOT NULL,     -- владелец бота
+                        campaign_id INTEGER,
+                        status TEXT NOT NULL,             -- success, failed
+                        error TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (bot_user_id) REFERENCES system_users (id),
+                        FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
+                    )
+                ''')
+                
+                # Миграции-страховки: добавляем недостающие колонки, если таблица уже была
+                for alter in [
+                    "ALTER TABLE user_settings ADD COLUMN welcome_file_id TEXT",
+                    "ALTER TABLE user_settings ADD COLUMN welcome_file_caption TEXT",
+                    "ALTER TABLE user_settings ADD COLUMN bot_token TEXT",
+                    "ALTER TABLE user_settings ADD COLUMN bot_username TEXT"
+                ]:
+                    try:
+                        cursor.execute(alter)
+                    except sqlite3.OperationalError:
+                        pass
                 
                 # Миграция: добавляем поле bot_user_id если его нет
                 try:
@@ -217,6 +262,40 @@ class Database:
         except Exception as e:
             logger.error(f"Ошибка получения пользователей: {e}")
             return []
+    
+    # ===== Помощники для system_users, создаваемых из Telegram (админ-бот) =====
+    def upsert_system_user_from_telegram(self, telegram_user_id: int, username: str, full_name: str = None) -> int:
+        """Создать или получить system_user для владельца по его Telegram ID.
+        Используем telegram_user_id как первичный ключ для удобной связи."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Пытаемся получить по id
+                cursor.execute('SELECT id FROM system_users WHERE id = ?', (telegram_user_id,))
+                row = cursor.fetchone()
+                if row:
+                    return row[0]
+                
+                # Пытаемся получить по username
+                if username:
+                    cursor.execute('SELECT id FROM system_users WHERE username = ?', (username,))
+                    row = cursor.fetchone()
+                    if row:
+                        # Проставим id если отличается (оставим как есть для целостности)
+                        return row[0]
+                
+                # Создаём пользователя с заданным id
+                password_hash = 'telegram-auth'  # маркер-заглушка
+                cursor.execute('''
+                    INSERT INTO system_users (id, username, password_hash, role, full_name, is_active, created_at)
+                    VALUES (?, ?, ?, 'user', ?, 1, CURRENT_TIMESTAMP)
+                ''', (telegram_user_id, username or f"user_{telegram_user_id}", password_hash, full_name))
+                conn.commit()
+                return telegram_user_id
+        except Exception as e:
+            logger.error(f"Ошибка upsert system_user от Telegram ID {telegram_user_id}: {e}")
+            raise
     
     def add_message(self, user_id: int, text: str, is_from_user: bool = True, bot_user_id = None) -> bool:
         """Добавление сообщения"""
@@ -579,7 +658,8 @@ class Database:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT welcome_message, welcome_pdf_path, bot_token, bot_username, bot_name, bot_description, start_command, created_at, updated_at
+                SELECT welcome_message, welcome_pdf_path, bot_token, bot_username, bot_name, bot_description, start_command, created_at, updated_at,
+                       welcome_file_id, welcome_file_caption
                 FROM user_settings 
                 WHERE user_id = ?
             ''', (user_id,))
@@ -595,14 +675,16 @@ class Database:
                     'bot_description': result[5],
                     'start_command': result[6],
                     'created_at': result[7],
-                    'updated_at': result[8]
+                    'updated_at': result[8],
+                    'welcome_file_id': result[9] if len(result) > 9 else '',
+                    'welcome_file_caption': result[10] if len(result) > 10 else ''
                 }
             else:
                 # Создать настройки по умолчанию для пользователя
                 cursor.execute('''
-                    INSERT INTO user_settings (user_id, welcome_message, welcome_pdf_path, bot_token, bot_username, bot_name, bot_description, start_command)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (user_id, 'Добро пожаловать! 👋', '', '', '', 'Мой бот', '', 'Добро пожаловать! Нажмите /help для справки.'))
+                    INSERT INTO user_settings (user_id, welcome_message, welcome_pdf_path, bot_token, bot_username, bot_name, bot_description, start_command, welcome_file_id, welcome_file_caption)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (user_id, 'Добро пожаловать! 👋', '', '', '', 'Мой бот', '', 'Добро пожаловать! Нажмите /help для справки.', '', ''))
                 conn.commit()
                 
                 return {
@@ -614,7 +696,9 @@ class Database:
                     'bot_description': '',
                     'start_command': 'Добро пожаловать! Нажмите /help для справки.',
                     'created_at': datetime.now().isoformat(),
-                    'updated_at': datetime.now().isoformat()
+                    'updated_at': datetime.now().isoformat(),
+                    'welcome_file_id': '',
+                    'welcome_file_caption': ''
                 }
 
     def update_user_welcome_message(self, user_id, message):
@@ -638,6 +722,18 @@ class Database:
                 SET welcome_pdf_path = ?, updated_at = ?
                 WHERE user_id = ?
             ''', (pdf_path, datetime.now().isoformat(), user_id))
+            conn.commit()
+            return True
+    
+    def update_user_welcome_file_id(self, user_id, file_id: str, caption: str = ''):
+        """Сохранить file_id и подпись для приветственного файла"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE user_settings 
+                SET welcome_file_id = ?, welcome_file_caption = ?, updated_at = ?
+                WHERE user_id = ?
+            ''', (file_id, caption, datetime.now().isoformat(), user_id))
             conn.commit()
             return True
 
@@ -664,6 +760,91 @@ class Database:
             ''', (bot_token, bot_username, datetime.now().isoformat(), user_id))
             conn.commit()
             return True
+    
+    # ===== Кампании (рассылки) и логи =====
+    def create_campaign(self, owner_user_id: int, text: str = None, photo_file_id: str = None, scheduled_at: str = None) -> int:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO campaigns (user_id, text, photo_file_id, scheduled_at, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'scheduled', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ''', (owner_user_id, text, photo_file_id, scheduled_at))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def list_campaigns(self, owner_user_id: int, limit: int = 50):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, text, photo_file_id, scheduled_at, status, created_at
+                FROM campaigns
+                WHERE user_id = ?
+                ORDER BY 
+                    CASE WHEN scheduled_at IS NULL THEN 1 ELSE 0 END,
+                    COALESCE(scheduled_at, created_at) DESC
+                LIMIT ?
+            ''', (owner_user_id, limit))
+            rows = cursor.fetchall()
+            return [
+                {
+                    'id': r[0],
+                    'text': r[1],
+                    'photo_file_id': r[2],
+                    'scheduled_at': r[3],
+                    'status': r[4],
+                    'created_at': r[5],
+                } for r in rows
+            ]
+    
+    def get_due_campaigns(self):
+        """Кампании к отправке сейчас"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, user_id, text, photo_file_id
+                FROM campaigns
+                WHERE status = 'scheduled' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)
+                ORDER BY COALESCE(scheduled_at, created_at) ASC
+            ''')
+            return [{'id': r[0], 'user_id': r[1], 'text': r[2], 'photo_file_id': r[3]} for r in cursor.fetchall()]
+    
+    def mark_campaign_status(self, campaign_id: int, status: str):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE campaigns SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+            ''', (status, campaign_id))
+            conn.commit()
+            return True
+    
+    def log_delivery(self, recipient_user_id: int, owner_user_id: int, campaign_id: int, status: str, error: str = None):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO delivery_logs (user_id, bot_user_id, campaign_id, status, error, created_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (recipient_user_id, owner_user_id, campaign_id, status, error))
+            conn.commit()
+            return True
+    
+    def get_broadcast_stats(self, owner_user_id: int, since: str = None):
+        """Статистика по доставкам кампаний"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            if since:
+                cursor.execute('''
+                    SELECT status, COUNT(*) FROM delivery_logs
+                    WHERE bot_user_id = ? AND created_at >= ?
+                    GROUP BY status
+                ''', (owner_user_id, since))
+            else:
+                cursor.execute('''
+                    SELECT status, COUNT(*) FROM delivery_logs
+                    WHERE bot_user_id = ?
+                    GROUP BY status
+                ''', (owner_user_id,))
+            rows = cursor.fetchall()
+            return {r[0]: r[1] for r in rows}
 
     def get_users_for_bot(self, bot_user_id):
         """Получить пользователей, которые общались с конкретным ботом"""

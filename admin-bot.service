@@ -1,0 +1,26 @@
+[Unit]
+Description=Admin Telegram Bot (controls user bots, broadcasts, scheduling)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=telegram_bot_admin
+Group=telegram_bot_admin
+WorkingDirectory=/home/telegram_bot_admin
+Environment=PATH=/home/telegram_bot_admin/venv/bin
+Environment=PYTHONPATH=/home/telegram_bot_admin
+ExecStart=/home/telegram_bot_admin/venv/bin/python run_admin_bot.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
+
+
