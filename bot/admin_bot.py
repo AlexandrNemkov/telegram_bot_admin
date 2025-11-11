@@ -72,8 +72,6 @@ class AdminBot:
     async def _send_owner_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("➕ Добавить своего бота", callback_data="add_bot")],
-            [InlineKeyboardButton("📣 Создать рассылку", callback_data="broadcast")],
-            [InlineKeyboardButton("🗓 Мои рассылки", callback_data="list_campaigns")],
             [InlineKeyboardButton("📊 Статистика", callback_data="stats")],
             [InlineKeyboardButton("📎 Приветственный файл", callback_data="welcome_file")],
         ]
@@ -89,8 +87,7 @@ class AdminBot:
         await update.message.reply_text(
             "Доступно:\n"
             "— Добавить своего бота (токен + username)\n"
-            "— Создавать рассылки с текстом/фото, сейчас или по расписанию\n"
-            "— Смотреть статистику подписчиков и доставок\n"
+            "— Смотреть базовую статистику подписчиков\n"
             "— Задать приветственный файл (file_id) и подпись"
         )
 
@@ -101,21 +98,6 @@ class AdminBot:
         if data == "add_bot":
             await query.edit_message_text("Пришлите токен вашего бота:")
             return ADD_BOT_WAIT_TOKEN
-        if data == "broadcast":
-            await query.edit_message_text("Пришлите текст рассылки (можно пусто, если будет только фото):")
-            return BROADCAST_WAIT_TEXT
-        if data == "list_campaigns":
-            owner_id = self._ensure_owner(update)
-            campaigns = self.db.list_campaigns(owner_id, 20)
-            if not campaigns:
-                await query.edit_message_text("Нет кампаний.")
-                return ConversationHandler.END
-            lines = []
-            for c in campaigns:
-                when = c["scheduled_at"] or c["created_at"]
-                lines.append(f"#{c['id']} [{c['status']}] — {when} — {'фото' if c['photo_file_id'] else 'текст'}")
-            await query.edit_message_text("\n".join(lines)[:4000])
-            return ConversationHandler.END
         if data == "stats":
             owner_id = self._ensure_owner(update)
             # Подписчики
@@ -124,17 +106,11 @@ class AdminBot:
             week_ago = (datetime.now() - timedelta(days=7)).isoformat()
             new_24h = self.db.get_new_subscribers_count(owner_id, day_ago)
             new_7d = self.db.get_new_subscribers_count(owner_id, week_ago)
-            # "Отписки" по сбоям доставок (эвристика)
-            logs_24h = self.db.get_broadcast_stats(owner_id, day_ago)
-            logs_7d = self.db.get_broadcast_stats(owner_id, week_ago)
             text = (
                 f"Подписчики\n"
                 f"— Всего: {total}\n"
                 f"— За 24ч: +{new_24h}\n"
-                f"— За 7д: +{new_7d}\n\n"
-                f"Доставки (эвристика отказов как отписки)\n"
-                f"— За 24ч: ok={logs_24h.get('success',0)} fail={logs_24h.get('failed',0)}\n"
-                f"— За 7д: ok={logs_7d.get('success',0)} fail={logs_7d.get('failed',0)}\n"
+                f"— За 7д: +{new_7d}\n"
             )
             await query.edit_message_text(text)
             return ConversationHandler.END
@@ -273,10 +249,8 @@ class AdminBot:
             self.db.mark_campaign_status(campaign_id, "failed")
 
     async def scheduler_tick(self, context: ContextTypes.DEFAULT_TYPE):
-        due = self.db.get_due_campaigns()
-        for c in due:
-            self.db.mark_campaign_status(c["id"], "sending")
-            await self._send_campaign(c["user_id"], c["id"], c["text"], c["photo_file_id"])
+        # Функционал рассылок отключён для админ-бота
+        return
 
     # ===== Bootstrap =====
     def run(self):
@@ -316,13 +290,12 @@ class AdminBot:
 
         application.add_handler(CommandHandler("start", self.start))
         application.add_handler(CommandHandler("help", self.help))
-        application.add_handler(CallbackQueryHandler(self.on_button, pattern="^(list_campaigns|stats)$"))
+        application.add_handler(CallbackQueryHandler(self.on_button, pattern="^(stats)$"))
         application.add_handler(add_bot_conv)
-        application.add_handler(bc_conv)
+        # Рассылки отключены
         application.add_handler(welcome_conv)
 
-        # Планировщик
-        application.job_queue.run_repeating(self.scheduler_tick, interval=15, first=5)
+        # Планировщик отключён для админ-бота
 
         logger.info("Admin bot started")
         application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
